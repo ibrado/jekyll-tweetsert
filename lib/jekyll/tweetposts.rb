@@ -214,7 +214,7 @@ module Jekyll
         Jekyll.logger.warn "Tweetposts:", "Using default access token, please setup your own"
 
         if access = retrieve('access-token', 'https://tweetposts--ibrado.netlify.com/token/jekyll-tweetposts.json', {}, {}, 86400)
-          JSON.parse(access.token).token
+          access["token"]
         else
           "no-token-available"
         end
