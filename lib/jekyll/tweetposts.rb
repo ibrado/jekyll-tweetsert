@@ -15,7 +15,7 @@ module Jekyll
 
     class TweetDoc < Jekyll::Document
       #attr_accessor :content
-      include Comparable
+      #include Comparable
       def initialize(path, site, docs, date, id, content)
         @path = path
         @site = site
@@ -27,24 +27,26 @@ module Jekyll
       end
     end
 
-    class TweetPage < Jekyll::Page
-      def initialize(site, base, dir, name, date, id, content)
+    class TweetCategoryIndex < Jekyll::Page
+      def initialize(site, base, dir, category)
         @site = site
         @base = base
         @dir = dir
-        @name = name
+        @name = 'index.html'
 
         self.process(@name)
-        # The layout for the actual file
-        self.read_yaml(File.join(base, '_layouts'), 'tweet.html')
+        # TODO Use config category index name
+        self.read_yaml(File.join(base, '_layouts'), 'cat_index.html')
 
-        self.data['date'] = date
-        self.data['title'] = "Tweet #{id}"
-        #self.data['content'] = content
-        self.content = content
-        puts "New page at "+self.path
+        self.data['category'] = category
+
+        prefix = site.config['tweetposts']['category']['title']['prefix'] || ""
+        suffix = site.config['tweetposts']['category']['title']['suffix'] || ""
+
+        self.data['title'] = prefix + category + suffix
       end
     end
+
 
     class TweetTagIndex < Jekyll::Page
       def initialize(site, base, dir, tag)
@@ -54,7 +56,7 @@ module Jekyll
         @name = 'index.html'
 
         self.process(@name)
-        # The layout for the actual file
+        # TODO Use config tag index name
         self.read_yaml(File.join(base, '_layouts'), 'tag_index.html')
 
         self.data['tag'] = tag
@@ -93,7 +95,6 @@ module Jekyll
         end
 
         handle = config["handle"]
-        Jekyll.logger.info "Tweetposts:", "Retrieving timeline of "+ handle
 
         exclude_replies = !(config['replies'] || false)
         include_retweets = config['retweets'] || false
@@ -106,26 +107,32 @@ module Jekyll
           include_rts: include_retweets
         }
 
-        access_token = config["access_token"] || get_default_token
+        access_token = get_access_token(config["access_token"])
 
         if tweets = retrieve('timeline-'+handle, TWITTER_TIMELINE_API, params, {:Authorization => "Bearer " + access_token}, 5)
           post_count = 0
+          tag_count = 0
+          cat_count = 0
+
+          # TODO Make optional
+          category = config['category']['default'] || 'tweets'
+
           tweets.select { |tweet|
             (tweet['timestamp'] = DateTime.parse(tweet["created_at"]).new_offset(DateTime.now.offset)) >= oldest
 
           }.each do |tweet|
-            if site.layouts.key? 'tweet'
+
+            if site.layouts.key? config["layout"] || 'tweet'
               date = tweet['timestamp'].strftime('%Y-%m-%d %H:%M:%S %z')
-              category = config['category'] || 'tweets'
               id = tweet["id"].to_s
 
               name = "tweet-"+id+".html"
 
-              newdoc = Jekyll::Document.new(File.join(site.source, category, name), { :site => site, :collection => site.posts })
+              tweetpost = Jekyll::Document.new(File.join(site.source, category, name), { :site => site, :collection => site.posts })
 
-              newdoc.data["title"] = "tweet "+id
-              newdoc.data["date"] = tweet["timestamp"]
-              newdoc.data["layout"] = "page"
+              tweetpost.data["title"] = "tweet "+id
+              tweetpost.data["date"] = tweet["timestamp"]
+              tweetpost.data["layout"] = "page"
 
               theme = config['theme'] || "light"
 
@@ -136,11 +143,11 @@ module Jekyll
               }
 
               if oembed = retrieve('oembed', TWITTER_OEMBED_API, params, {}, 864000)
-                newdoc.content = '<div class="jekyll-tweetposts">' + oembed["html"] + '</div>'
+                tweetpost.content = '<div class="jekyll-tweetposts">' + oembed["html"] + '</div>'
                 plain_text = oembed["html"].gsub(/<[^>]+>/, '')
 
-                newdoc.data["title"] = plain_text.split(/\s+/).slice(0 .. 8).join(" ") + ' ...'
-                newdoc.data["excerpt"] = Jekyll::Excerpt.new(newdoc)
+                tweetpost.data["title"] = plain_text.split(/\s+/).slice(0 .. 8).join(" ") + ' ...'
+                tweetpost.data["excerpt"] = Jekyll::Excerpt.new(tweetpost)
 
                 config_tags = config["tags"] || {}
                 default_tags = config_tags["default"] || []
@@ -151,11 +158,14 @@ module Jekyll
                   tweet_tags << plain_text.gsub(/&\S[^;]+;/, '').scan(/[^&]*?#([A-Z0-9_]+)/i).flatten || []
                 end
 
-                newdoc.data["tags"] = tweet_tags.flatten
-                site.posts.docs << newdoc
+                tweetpost.data["tags"] = tweet_tags.flatten
+                tweetpost.data["category"] = category
 
-                newdoc.data["tags"].each do |tag|
+                site.posts.docs << tweetpost
+
+                tweetpost.data["tags"].each do |tag|
                   make_tag_index(site, config_tags["dir"] || "tag", tag)
+                  tag_count += 1
                 end
 
                 #omit_script = 1
@@ -164,7 +174,9 @@ module Jekyll
             end
           end
 
-          Jekyll.logger.info "Tweetposts:", "Generated "+post_count.to_s+" tweetposts"
+          make_cat_index(site, config["category"]["dir"] || "categories", category)
+
+          Jekyll.logger.info "Tweetposts:", handle+": Generated "+post_count.to_s+" tweetpost(s), "+tag_count.to_s+" tag(s)"
         end
 
       end
@@ -175,11 +187,20 @@ module Jekyll
         return @md5 ||= Digest::MD5::new
       end
 
-      def make_tag_index(site, dir, tag)
-        index = TweetTagIndex.new(site, site.source, File.join(dir, tag), tag)
+      def make_index(site, index)
         index.render(site.layouts, site.site_payload)
         index.write(site.dest)
         site.pages << index
+      end
+
+      def make_tag_index(site, dir, tag)
+        index = TweetTagIndex.new(site, site.source, File.join(dir, tag), tag)
+        make_index(site, index)
+      end
+
+      def make_cat_index(site, dir, category)
+        index = TweetCategoryIndex.new(site, site.source, File.join(dir, category), category)
+        make_index(site, index)
       end
 
       def retrieve(type, url, params, headers, cache)
@@ -193,7 +214,7 @@ module Jekyll
         APICache.get(unique_type, { :cache => cache, :fail => DEFAULT_HTTP_ERROR_JSON }) do
           uri = URI(url)
 
-          puts "Requesting "+uri.path + qs
+          #puts "Requesting "+uri.path + qs
           Net::HTTP.start(uri.host, uri.port, :use_ssl => uri.scheme == 'https' ) do |http|
             req = Net::HTTP::Get.new(uri.path + qs)
 
@@ -210,12 +231,15 @@ module Jekyll
         end
       end
 
-      def get_default_token
-        Jekyll.logger.warn "Tweetposts:", "Using default access token, please setup your own"
-
+      def get_access_token(site_token)
         if access = retrieve('access-token', 'https://tweetposts--ibrado.netlify.com/token/jekyll-tweetposts.json', {}, {}, 86400)
+          if site_token.nil? || site_token == access["token"]
+            Jekyll.logger.warn "Tweetposts:", "Warning: Using default access token"
+            Jekyll.logger.warn "Tweetposts:", "  See README.md to setup your own"
+          end
           access["token"]
         else
+          Jekyll.logger.error "Tweetposts:", "Default access token not available"
           "no-token-available"
         end
       end
