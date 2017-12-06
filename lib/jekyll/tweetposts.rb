@@ -35,13 +35,16 @@ module Jekyll
         @name = 'index.html'
 
         self.process(@name)
-        # TODO Use config category index name
-        self.read_yaml(File.join(base, '_layouts'), 'cat_index.html')
+
+        cat_config = site.config['tweetposts']['category'] || {}
+
+        layout = cat_config["layout"] || "category_index.html"
+        self.read_yaml(File.join(base, '_layouts'), layout)
 
         self.data['category'] = category
 
-        prefix = site.config['tweetposts']['category']['title']['prefix'] || ""
-        suffix = site.config['tweetposts']['category']['title']['suffix'] || ""
+        prefix = cat_config.has_key?("title") ? cat_config['title']['prefix'] : ""
+        suffix = cat_config.has_key?("title") ? cat_config['title']['suffix'] : ""
 
         self.data['title'] = prefix + category + suffix
       end
@@ -56,27 +59,37 @@ module Jekyll
         @name = 'index.html'
 
         self.process(@name)
-        # TODO Use config tag index name
-        self.read_yaml(File.join(base, '_layouts'), 'tag_index.html')
+
+        tag_config = site.config['tweetposts']['tags']
+
+        layout = tag_config["layout"] || "tag_index.html"
+        self.read_yaml(File.join(base, '_layouts'), layout)
 
         self.data['tag'] = tag
 
-        prefix = site.config['tweetposts']['tags']['title']['prefix'] || ""
-        suffix = site.config['tweetposts']['tags']['title']['suffix'] || ""
+        prefix = tag_config.has_key?("title") ? tag_config['title']['prefix'] : ""
+        suffix = tag_config.has_key?("title") ? tag_config['title']['suffix'] : ""
+
         self.data['title'] = prefix + tag + suffix
       end
     end
 
 
     class Generator < Jekyll::Generator
+
       def generate(site)
         config = site.config["tweetposts"]
+
         if config.nil? || !config["enabled"]
-          err_msg = "Please add/enable the Tweetposts configuration to your _config.yml"
-          Jekyll.logger.warn "Tweetposts:", err_msg
           return
-          #raise ArgumentError.new(err_msg)
         end
+
+        if !config.has_key?("timeline")
+          Jekyll.logger.error "Tweetposts:", "Timeline coinfiguration not found"
+          return
+        end
+
+        timeline = config["timeline"]
 
         APICache.store = Moneta.new(:File, dir: './.tweetposts-cache')
 
@@ -94,28 +107,32 @@ module Jekyll
           newest = [newest, timestamp].max
         end
 
-        handle = config["handle"]
+        handle = timeline["handle"]
 
-        exclude_replies = !(config['replies'] || false)
-        include_retweets = config['retweets'] || false
+        exclude_replies = timeline['replies'] ? '0' : '1'
+        include_retweets = timeline['retweets'] ? '1' : '0'
 
         params = {
           screen_name: handle,
-          count: config["limit"] || 100,
-          trim_user: true,
+          count: timeline["limit"] || 100,
+          trim_user: 1,
           exclude_replies: exclude_replies,
           include_rts: include_retweets
         }
 
-        access_token = get_access_token(config["access_token"])
+        access_token = get_access_token(timeline["access_token"])
 
-        if tweets = retrieve('timeline-'+handle, TWITTER_TIMELINE_API, params, {:Authorization => "Bearer " + access_token}, 5)
+        if tweets = retrieve('timeline', TWITTER_TIMELINE_API, params, {:Authorization => "Bearer " + access_token}, 5)
           post_count = 0
           tag_count = 0
+          seen_tags = {}
           cat_count = 0
 
           # TODO Make optional
           category = config['category']['default'] || 'tweets'
+
+          config_tags = config["tags"] || {}
+          default_tag = config_tags["default"]
 
           tweets.select { |tweet|
             (tweet['timestamp'] = DateTime.parse(tweet["created_at"]).new_offset(DateTime.now.offset)) >= oldest
@@ -149,13 +166,11 @@ module Jekyll
                 tweetpost.data["title"] = plain_text.split(/\s+/).slice(0 .. 8).join(" ") + ' ...'
                 tweetpost.data["excerpt"] = Jekyll::Excerpt.new(tweetpost)
 
-                config_tags = config["tags"] || {}
-                default_tags = config_tags["default"] || []
-
-                tweet_tags = default_tags
+                tweet_tags = []
+                tweet_tags << default_tag if default_tag && !default_tag.empty?
 
                 if config_tags["hashtags"]
-                  tweet_tags << plain_text.gsub(/&\S[^;]+;/, '').scan(/[^&]*?#([A-Z0-9_]+)/i).flatten || []
+                  tweet_tags << plain_text.downcase.gsub(/&\S[^;]+;/, '').scan(/[^&]*?#([A-Z0-9_]+)/i).flatten || []
                 end
 
                 tweetpost.data["tags"] = tweet_tags.flatten
@@ -165,7 +180,10 @@ module Jekyll
 
                 tweetpost.data["tags"].each do |tag|
                   make_tag_index(site, config_tags["dir"] || "tag", tag)
-                  tag_count += 1
+                  if !seen_tags.has_key?(tag)
+                    tag_count += 1
+                    seen_tags[default_tag] = 1
+                  end
                 end
 
                 #omit_script = 1
@@ -209,12 +227,13 @@ module Jekyll
 
         md5.reset
         md5 << type+qs
+
         unique_type = type + "-" + md5.hexdigest
 
         APICache.get(unique_type, { :cache => cache, :fail => DEFAULT_HTTP_ERROR_JSON }) do
           uri = URI(url)
 
-          #puts "Requesting "+uri.path + qs
+          #puts unique_type+" Requesting "+uri.path + qs
           Net::HTTP.start(uri.host, uri.port, :use_ssl => uri.scheme == 'https' ) do |http|
             req = Net::HTTP::Get.new(uri.path + qs)
 
@@ -225,6 +244,7 @@ module Jekyll
             when Net::HTTPSuccess
               JSON.parse(response.body)
             else
+              Jekyll.logger.warn "Tweetposts:", "Got invalid response!"
               raise APICache::InvalidResponse
             end
           end
@@ -239,8 +259,8 @@ module Jekyll
           end
           access["token"]
         else
-          Jekyll.logger.error "Tweetposts:", "Default access token not available"
-          "no-token-available"
+          Jekyll.logger.error "Tweetposts:", "Default access token not available" if site_token.nil?
+          site_token || "no-token-available"
         end
       end
     end
