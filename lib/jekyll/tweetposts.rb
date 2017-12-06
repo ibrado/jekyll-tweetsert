@@ -84,12 +84,13 @@ module Jekyll
           return
         end
 
-        if !config.has_key?("timeline")
-          Jekyll.logger.error "Tweetposts:", "Timeline coinfiguration not found"
+        if !config.has_key?("timeline") || !config.has_key?("embed")
+          Jekyll.logger.error "Tweetposts:", "Timeline and/or embed cofiguration not found"
           return
         end
 
         timeline = config["timeline"]
+        embed = config["embed"]
 
         APICache.store = Moneta.new(:File, dir: './.tweetposts-cache')
 
@@ -115,9 +116,9 @@ module Jekyll
         params = {
           screen_name: handle,
           count: timeline["limit"] || 100,
-          trim_user: 1,
           exclude_replies: exclude_replies,
-          include_rts: include_retweets
+          include_rts: include_retweets,
+          trim_user: 1
         }
 
         access_token = get_access_token(timeline["access_token"])
@@ -151,12 +152,10 @@ module Jekyll
               tweetpost.data["date"] = tweet["timestamp"]
               tweetpost.data["layout"] = "page"
 
-              theme = config['theme'] || "light"
-
               params = {
                 url: "https://twitter.com/"+handle+"/status/"+ id,
-                theme: theme,
-                omit_script: config["omit_script"]
+                theme: embed['theme'] || "light",
+                omit_script: embed["omit_script"]
               }
 
               if oembed = retrieve('oembed', TWITTER_OEMBED_API, params, {}, 864000)
