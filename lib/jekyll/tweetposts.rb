@@ -129,11 +129,11 @@ module Jekyll
           seen_tags = {}
           cat_count = 0
 
-          # TODO Make optional
-          category = config['category']['default'] || 'tweets'
+          cat_config = config["category"] || {}
+          category = cat_config['default'] || ""
 
-          config_tags = config["tags"] || {}
-          default_tag = config_tags["default"]
+          tags_config = config["tags"] || {}
+          default_tag = tags_config["default"]
 
           tweets.select { |tweet|
             (tweet['timestamp'] = DateTime.parse(tweet["created_at"]).new_offset(DateTime.now.offset)) >= oldest
@@ -168,7 +168,7 @@ module Jekyll
                 tweet_tags = []
                 tweet_tags << default_tag if default_tag && !default_tag.empty?
 
-                if config_tags["hashtags"]
+                if tags_config["hashtags"]
                   tweet_tags << plain_text.downcase.gsub(/&\S[^;]+;/, '').scan(/[^&]*?#([A-Z0-9_]+)/i).flatten || []
                 end
 
@@ -178,7 +178,7 @@ module Jekyll
                 site.posts.docs << tweetpost
 
                 tweetpost.data["tags"].each do |tag|
-                  make_tag_index(site, config_tags["dir"] || "tag", tag)
+                  make_tag_index(site, tags_config["dir"] || "tag", tag)
                   if !seen_tags.has_key?(tag)
                     tag_count += 1
                     seen_tags[default_tag] = 1
@@ -191,7 +191,7 @@ module Jekyll
             end
           end
 
-          make_cat_index(site, config["category"]["dir"] || "categories", category)
+          make_cat_index(site, config["category"]["dir"] || "categories", category) if category
 
           Jekyll.logger.info "Tweetposts:", handle+": Generated "+post_count.to_s+" tweetpost(s), "+tag_count.to_s+" tag(s)"
         end
