@@ -122,12 +122,12 @@ module Jekyll
         }
 
         access_token = get_access_token(timeline["access_token"])
+        puts "Using access_token="+access_token
 
         if tweets = retrieve('timeline', TWITTER_TIMELINE_API, params, {:Authorization => "Bearer " + access_token}, 5)
           post_count = 0
           tag_count = 0
           seen_tags = {}
-          cat_count = 0
 
           cat_config = config["category"] || {}
           category = cat_config['default'] || ""
@@ -155,6 +155,7 @@ module Jekyll
               params = {
                 url: "https://twitter.com/"+handle+"/status/"+ id,
                 theme: embed['theme'] || "light",
+                link_color: embed["link_color"],
                 omit_script: embed["omit_script"]
               }
 
@@ -191,9 +192,13 @@ module Jekyll
             end
           end
 
-          make_cat_index(site, config["category"]["dir"] || "categories", category) if category
+          msg = handle+": Generated "+post_count.to_s+" tweetpost(s), "+tag_count.to_s+" tag(s)"
+          if category
+            make_cat_index(site, config["category"]["dir"] || "categories", category)
+            msg << ", 1 category"
+          end
 
-          Jekyll.logger.info "Tweetposts:", handle+": Generated "+post_count.to_s+" tweetpost(s), "+tag_count.to_s+" tag(s)"
+          Jekyll.logger.info "Tweetposts:", msg
         end
 
       end
@@ -232,7 +237,7 @@ module Jekyll
         APICache.get(unique_type, { :cache => cache, :fail => DEFAULT_HTTP_ERROR_JSON }) do
           uri = URI(url)
 
-          #puts unique_type+" Requesting "+uri.path + qs
+          puts unique_type+" Requesting "+uri.path + qs
           Net::HTTP.start(uri.host, uri.port, :use_ssl => uri.scheme == 'https' ) do |http|
             req = Net::HTTP::Get.new(uri.path + qs)
 
@@ -244,6 +249,7 @@ module Jekyll
               JSON.parse(response.body)
             else
               Jekyll.logger.warn "Tweetposts:", "Got invalid response!"
+              puts response.inspect
               raise APICache::InvalidResponse
             end
           end
@@ -256,7 +262,7 @@ module Jekyll
             Jekyll.logger.warn "Tweetposts:", "Warning: Using default access token"
             Jekyll.logger.warn "Tweetposts:", "  See README.md to setup your own"
           end
-          access["token"]
+          site_token || access["token"]
         else
           Jekyll.logger.error "Tweetposts:", "Default access token not available" if site_token.nil?
           site_token || "no-token-available"
