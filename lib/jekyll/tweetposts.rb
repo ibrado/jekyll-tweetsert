@@ -94,122 +94,60 @@ module Jekyll
 
         APICache.store = Moneta.new(:File, dir: './.tweetposts-cache')
 
-      # find timeframe, i.e. earliest and latest posts
+        bracket = timeline['stop_at_oldest_post'] || timeline['stop_at_oldest_post'].nil?
 
-        # Random(?) future date
-        oldest = DateTime.new(2974,1,30)
-        newest = DateTime.new()
+        if bracket
+          # find timeframe, i.e. earliest and latest posts
+          # Random(?) future date
+          oldest = DateTime.new(2974,1,30)
+          #newest = DateTime.new()
 
-        # posts.each should be changed to posts.docs.each.
-        site.posts.docs.each do |post|
-          timestamp = post.data["date"].to_datetime
-          # All posts have dates or Jekyll will stop
-          oldest = [oldest, timestamp].min
-          newest = [newest, timestamp].max
+          # posts.each should be changed to posts.docs.each.
+          site.posts.docs.each do |post|
+            timestamp = post.data["date"].to_datetime
+            # All posts have dates or Jekyll will stop
+            oldest = [oldest, timestamp].min
+            #newest = [newest, timestamp].max
+          end
+        else
+          oldest = DateTime.new()
         end
 
-        handle = timeline["handle"]
+        handles = []
+        handles << timeline["handle"] if timeline["handle"]
+        (handles << timeline["handles"]).flatten! if timeline["handles"]
 
         exclude_replies = timeline['replies'] ? '0' : '1'
         include_retweets = timeline['retweets'] ? '1' : '0'
 
-        params = {
-          screen_name: handle,
-          count: timeline["limit"] || 100,
+        cat_config = config["category"] || {}
+        category = cat_config['default'] || ""
+
+        tags_config = config["tags"] || {}
+        default_tag = tags_config["default"]
+
+        options = {
+          oldest: oldest,
+          limit: timeline["limit"] || 100,
+          category: category,
+          dir: tags_config["dir"],
+          layout: (site.layouts.key? config["layout"] || 'tweet'),
           exclude_replies: exclude_replies,
-          include_rts: include_retweets,
-          tweet_mode: "extended",
-          trim_user: 1
+          include_retweets: include_retweets,
+          hashtags: tags_config["hashtags"],
+          default_tag: default_tag,
+          exclusions: timeline['exclude'].reject { |w| w.nil? },
+          access_token: get_access_token(timeline["access_token"]),
+          embed: embed
         }
 
-        access_token = get_access_token(timeline["access_token"])
-        #puts "Using access_token="+access_token
-
-        if tweets = retrieve('timeline', TWITTER_TIMELINE_API, params, {:Authorization => "Bearer " + access_token}, 5)
-          post_count = 0
-          tag_count = 0
-          seen_tags = {}
-
-          cat_config = config["category"] || {}
-          category = cat_config['default'] || ""
-
-          tags_config = config["tags"] || {}
-          default_tag = tags_config["default"]
-
-          tweets.select { |tweet|
-            tweet['timestamp'] = DateTime.parse(tweet["created_at"]).new_offset(DateTime.now.offset)
-
-            excluded = tweet["timestamp"] < oldest
-
-            if !excluded && timeline['exclude']
-              urls = tweet["entities"]["urls"].map { |url| url["expanded_url"] }.join(" ")
-
-              exclusions = timeline['exclude'].reject { |w| w.nil? }
-              excluded ||= exclusions.any? { |w| tweet["full_text"] =~ /([\b#\@]?)#{w}\b/i } ||
-                exclusions.any? { |w| urls =~ /\b#{w}/i }
-            end
-
-            !excluded
-
-          }.each do |tweet|
-
-            if site.layouts.key? config["layout"] || 'tweet'
-              date = tweet['timestamp'].strftime('%Y-%m-%d %H:%M:%S %z')
-              id = tweet["id"].to_s
-
-              name = "tweet-"+id+".html"
-
-              tweetpost = Jekyll::Document.new(File.join(site.source, category, name), { :site => site, :collection => site.posts })
-
-              tweetpost.data["title"] = "tweet "+id
-              tweetpost.data["date"] = tweet["timestamp"]
-              tweetpost.data["layout"] = "page"
-
-              params = {
-                url: "https://twitter.com/"+handle+"/status/"+ id,
-                theme: embed['theme'] || "light",
-                link_color: embed["link_color"],
-                omit_script: embed["omit_script"]
-              }
-
-              if oembed = retrieve('oembed', TWITTER_OEMBED_API, params, {}, 864000)
-                tweetpost.content = '<div class="jekyll-tweetposts">' + oembed["html"] + '</div>'
-
-                tweetpost.data["title"] = tweet["full_text"].split(/\s+/).slice(0 .. 8).join(" ") + ' ...'
-                tweetpost.data["excerpt"] = Jekyll::Excerpt.new(tweetpost)
-
-                tweet_tags = []
-                tweet_tags << default_tag if default_tag && !default_tag.empty?
-
-                if tags_config["hashtags"]
-                  tweet_tags << tweet["full_text"].downcase.gsub(/&\S[^;]+;/, '').scan(/[^&]*?#([A-Z0-9_]+)/i).flatten || []
-                end
-
-                tweetpost.data["tags"] = tweet_tags.flatten
-                tweetpost.data["category"] = category
-
-                site.posts.docs << tweetpost
-
-                tweetpost.data["tags"].each do |tag|
-                  make_tag_index(site, tags_config["dir"] || "tag", tag)
-                  if !seen_tags.has_key?(tag)
-                    tag_count += 1
-                    seen_tags[default_tag] = 1
-                  end
-                end
-
-                #omit_script = 1
-                post_count += 1
-              end
-            end
-          end
-
-          msg = handle+": Generated "+post_count.to_s+" tweetpost(s), "+tag_count.to_s+" tag(s)"
+        handles.each_with_index do |handle, i|
+          counts = generate_posts(site, handle, options)
+          msg = handle+": Generated "+counts[:posts].to_s+" tweetpost(s), "+counts[:tags].to_s+" tag(s)"
           if category
             make_cat_index(site, config["category"]["dir"] || "categories", category)
-            msg << ", 1 category"
+            msg << ", 1 category" if i.zero?
           end
-
           Jekyll.logger.info "Tweetposts:", msg
         end
 
@@ -261,7 +199,7 @@ module Jekyll
               JSON.parse(response.body)
             else
               Jekyll.logger.warn "Tweetposts:", "Got invalid response!"
-              #puts response.inspect
+              puts response.inspect
               raise APICache::InvalidResponse
             end
           end
@@ -280,6 +218,102 @@ module Jekyll
           site_token || "no-token-available"
         end
       end
-    end
-  end
-end
+
+      def generate_posts(site, handle, o)
+        params = {
+          screen_name: handle,
+          count: o[:limit],
+          exclude_replies: o[:exclude_replies],
+          include_rts: o[:include_retweets],
+          tweet_mode: "extended",
+          trim_user: 1
+        }
+
+        #puts "Using access_token="+access_token
+
+        post_count = 0
+        tag_count = 0
+
+        if tweets = retrieve('timeline', TWITTER_TIMELINE_API, params, {:Authorization => "Bearer " + o[:access_token]}, 5)
+          seen_tags = {}
+
+          tweets.select { |tweet|
+            tweet['timestamp'] = DateTime.parse(tweet["created_at"]).new_offset(DateTime.now.offset)
+
+            excluded = tweet["timestamp"] < o[:oldest]
+
+            if !excluded && o[:exclusions]
+              urls = tweet["entities"]["urls"].map { |url| url["expanded_url"] }.join(" ")
+
+              excluded ||= o[:exclusions].any? { |w| tweet["full_text"] =~ /([\b#\@]?)#{w}\b/i } ||
+                o[:exclusions].any? { |w| urls =~ /\b#{w}/i }
+
+            end
+
+            !excluded
+
+          }.each do |tweet|
+
+            if o[:layout]
+              date = tweet['timestamp'].strftime('%Y-%m-%d %H:%M:%S %z')
+              id = tweet["id"].to_s
+
+              name = "tweet-"+id+".html"
+
+              tweetpost = Jekyll::Document.new(File.join(site.source, o[:category], name), { :site => site, :collection => site.posts })
+
+              tweetpost.data["title"] = "tweet "+id
+              tweetpost.data["date"] = tweet["timestamp"]
+              tweetpost.data["layout"] = "page"
+
+              params = {
+                url: "https://twitter.com/"+handle+"/status/"+ id,
+                theme: o[:embed]['theme'] || "light",
+                link_color: o[:embed]["link_color"],
+                omit_script: o[:embed]["omit_script"]
+              }
+
+              if oembed = retrieve('oembed', TWITTER_OEMBED_API, params, {}, 864000)
+                tweetpost.content = '<div class="jekyll-tweetposts">' + oembed["html"] + '</div>'
+
+                tweetpost.data["title"] = tweet["full_text"].split(/\s+/).slice(0 .. 8).join(" ") + ' ...'
+                tweetpost.data["excerpt"] = Jekyll::Excerpt.new(tweetpost)
+
+                tweet_tags = []
+                tweet_tags << o[:default_tag] if o[:default_tag] && !o[:default_tag].empty?
+
+                if o[:hashtags]
+                  tweet_tags << tweet["full_text"].downcase.gsub(/&\S[^;]+;/, '').scan(/[^&]*?#([A-Z0-9_]+)/i).flatten || []
+                end
+
+                tweetpost.data["tags"] = tweet_tags.flatten
+                tweetpost.data["category"] = o[:category]
+
+                site.posts.docs << tweetpost
+
+                tweetpost.data["tags"].each do |tag|
+                  make_tag_index(site, o[:dir] || "tag", tag)
+                  if !seen_tags.has_key?(tag)
+                    tag_count += 1
+                    seen_tags[o[:default_tag]] = 1
+                  end
+                end
+
+                #omit_script = 1
+                post_count += 1
+              end # oembed
+
+            end # layout
+          end # each
+        end # if tweets
+
+        return {
+          :posts => post_count,
+          :tags => tag_count
+        }
+
+      end # def
+
+    end # class
+  end # module
+end #module
