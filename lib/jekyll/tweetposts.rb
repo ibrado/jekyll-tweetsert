@@ -142,12 +142,10 @@ module Jekyll
             excluded = tweet["timestamp"] < oldest
 
             if !excluded && timeline['exclude']
-              # Dump the various URLs into a string we can search
-              # There should be a more elegant way to search entities.urls[].expanded_url
-              url_info = JSON.dump(tweet["entities"]["urls"])
+              urls = tweet["entities"]["urls"].map { |url| url["expanded_url"] }.join(" ")
 
-              excluded ||= timeline['exclude'].any? { |w| tweet["full_text"] =~ /\b#{w}\b/i } ||
-                timeline['exclude'].any? { |w| url_info =~ /\b#{w}/i }
+              excluded ||= timeline['exclude'].any? { |w| tweet["full_text"] =~ /([\b#\@]?)#{w}\b/i } ||
+                timeline['exclude'].any? { |w| urls =~ /\b#{w}/i }
             end
 
             !excluded
