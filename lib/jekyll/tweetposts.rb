@@ -144,7 +144,7 @@ module Jekyll
             if !excluded && timeline['exclude']
               urls = tweet["entities"]["urls"].map { |url| url["expanded_url"] }.join(" ")
 
-              excluded ||= timeline['exclude'].any? { |w| tweet["full_text"] =~ /([\b#\@]?)#{w}\b/i } ||
+              excluded ||= timeline['exclude'].reject { |w| w.nil? }.any? { |w| tweet["full_text"] =~ /([\b#\@]?)#{w}\b/i } ||
                 timeline['exclude'].any? { |w| urls =~ /\b#{w}/i }
             end
 
