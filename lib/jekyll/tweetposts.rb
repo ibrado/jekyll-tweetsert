@@ -118,11 +118,12 @@ module Jekyll
           count: timeline["limit"] || 100,
           exclude_replies: exclude_replies,
           include_rts: include_retweets,
+          tweet_mode: "extended",
           trim_user: 1
         }
 
         access_token = get_access_token(timeline["access_token"])
-        puts "Using access_token="+access_token
+        #puts "Using access_token="+access_token
 
         if tweets = retrieve('timeline', TWITTER_TIMELINE_API, params, {:Authorization => "Bearer " + access_token}, 5)
           post_count = 0
@@ -136,7 +137,20 @@ module Jekyll
           default_tag = tags_config["default"]
 
           tweets.select { |tweet|
-            (tweet['timestamp'] = DateTime.parse(tweet["created_at"]).new_offset(DateTime.now.offset)) >= oldest
+            tweet['timestamp'] = DateTime.parse(tweet["created_at"]).new_offset(DateTime.now.offset)
+
+            excluded = tweet["timestamp"] < oldest
+
+            if !excluded && timeline['exclude']
+              # Dump the various URLs into a string we can search
+              # There should be a more elegant way to search entities.urls[].expanded_url
+              url_info = JSON.dump(tweet["entities"]["urls"])
+
+              excluded ||= timeline['exclude'].any? { |w| tweet["full_text"] =~ /\b#{w}\b/i } ||
+                timeline['exclude'].any? { |w| url_info =~ /\b#{w}/i }
+            end
+
+            !excluded
 
           }.each do |tweet|
 
@@ -161,16 +175,15 @@ module Jekyll
 
               if oembed = retrieve('oembed', TWITTER_OEMBED_API, params, {}, 864000)
                 tweetpost.content = '<div class="jekyll-tweetposts">' + oembed["html"] + '</div>'
-                plain_text = oembed["html"].gsub(/<[^>]+>/, '')
 
-                tweetpost.data["title"] = plain_text.split(/\s+/).slice(0 .. 8).join(" ") + ' ...'
+                tweetpost.data["title"] = tweet["full_text"].split(/\s+/).slice(0 .. 8).join(" ") + ' ...'
                 tweetpost.data["excerpt"] = Jekyll::Excerpt.new(tweetpost)
 
                 tweet_tags = []
                 tweet_tags << default_tag if default_tag && !default_tag.empty?
 
                 if tags_config["hashtags"]
-                  tweet_tags << plain_text.downcase.gsub(/&\S[^;]+;/, '').scan(/[^&]*?#([A-Z0-9_]+)/i).flatten || []
+                  tweet_tags << tweet["full_text"].downcase.gsub(/&\S[^;]+;/, '').scan(/[^&]*?#([A-Z0-9_]+)/i).flatten || []
                 end
 
                 tweetpost.data["tags"] = tweet_tags.flatten
@@ -237,7 +250,7 @@ module Jekyll
         APICache.get(unique_type, { :cache => cache, :fail => DEFAULT_HTTP_ERROR_JSON }) do
           uri = URI(url)
 
-          puts unique_type+" Requesting "+uri.path + qs
+          #puts unique_type+" Requesting "+uri.path + qs
           Net::HTTP.start(uri.host, uri.port, :use_ssl => uri.scheme == 'https' ) do |http|
             req = Net::HTTP::Get.new(uri.path + qs)
 
@@ -249,7 +262,7 @@ module Jekyll
               JSON.parse(response.body)
             else
               Jekyll.logger.warn "Tweetposts:", "Got invalid response!"
-              puts response.inspect
+              #puts response.inspect
               raise APICache::InvalidResponse
             end
           end
