@@ -224,7 +224,7 @@ module Jekyll
         qs = params.map{ |a| a.join('=') }.join('&')
         qs = '?'+qs unless qs.empty?
 
-        Net::HTTP.start(uri.host, uri.port, :use_ssl => true ) do |http|
+        Net::HTTP.start(uri.host, uri.port, :use_ssl => uri.scheme == 'https') do |http|
           req = Net::HTTP::Get.new(uri.path + qs)
           req['X-JTP-Access-Token'] = @access_token
 
