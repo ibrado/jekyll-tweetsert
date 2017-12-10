@@ -204,7 +204,6 @@ module Jekyll
             req = Net::HTTP::Get.new(uri.path + qs)
             headers.merge!(DEFAULT_REQUEST_HEADERS).each { |k, v| req[k] = v }
 
-            puts headers.inspect
             response = http.request(req)
 
             case response
