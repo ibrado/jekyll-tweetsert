@@ -145,7 +145,7 @@ module Jekyll
           limit: timeline["limit"] || 100,
           category: category,
           dir: tags_config["dir"],
-          layout: (site.layouts.key? config["layout"] || 'tweet'),
+          layout: (site.layouts.key? config["layout"] || 'page'),
           replies: timeline["replies"] ? '1' : '0',
           retweets: timeline["retweets"] ? '1' : '0',
           hashtags: tags_config["hashtags"],
