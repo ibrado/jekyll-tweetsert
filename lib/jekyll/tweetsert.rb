@@ -90,8 +90,8 @@ module Jekyll
           return
         end
 
-        if !config.has_key?("timeline") || !config.has_key?("embed")
-          Jekyll.logger.error "Tweetsert:", "Timeline and/or embed cofiguration not found"
+        if !config.has_key?("timeline")
+          Jekyll.logger.error "Tweetsert:", "Timeline configuration not found"
           return
         end
 
@@ -103,8 +103,6 @@ module Jekyll
         end
 
         @access_token = config["timeline"]["access_token"] || ENV['JTP_ACCESS_TOKEN']
-
-        embed = config["embed"]
 
         APICache.store = Moneta.new(:File, dir: './.tweetsert-cache')
 
@@ -140,6 +138,8 @@ module Jekyll
         includes = timeline["include"].reject { |w| w.nil? } if timeline["include"]
         excludes = timeline["exclude"].reject { |w| w.nil? } if timeline["exclude"]
 
+        embed = config["embed"] || {}
+
         options = {
           oldest: oldest,
           limit: timeline["limit"] || 100,
@@ -166,7 +166,7 @@ module Jekyll
             Jekyll.logger.info "Tweetsert:", msg
           end
         rescue Exception => e
-          #Jekyll.logger.error "Tweetsert:", e.message
+          Jekyll.logger.error "Tweetsert:", e.message
           return
         end
 
