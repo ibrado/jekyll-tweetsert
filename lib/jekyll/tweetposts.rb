@@ -137,6 +137,9 @@ module Jekyll
         tags_config = config["tags"] || {}
         default_tag = tags_config["default"]
 
+        includes = timeline["include"] || {}
+        excludes = timeline["exclude"] || {}
+
         options = {
           oldest: oldest,
           limit: timeline["limit"] || 100,
@@ -147,7 +150,8 @@ module Jekyll
           retweets: timeline["retweets"] ? '1' : '0',
           hashtags: tags_config["hashtags"],
           default_tag: default_tag,
-          exclusions: timeline['exclude'].reject { |w| w.nil? },
+          inclusions: includes.reject { |w| w.nil? },
+          exclusions: excludes.reject { |w| w.nil? },
           embed: embed
         }
 
@@ -161,7 +165,8 @@ module Jekyll
             end
             Jekyll.logger.info "Tweetposts:", msg
           end
-        rescue
+        rescue Exception => e
+          #Jekyll.logger.error "Tweetposts:", e.message
           return
         end
 
@@ -212,11 +217,10 @@ module Jekyll
             when Net::HTTPSuccess
               JSON.parse(response.body)
             when Net::HTTPUnauthorized
-              Jekyll.logger.warn "Tweetposts:", "Unauthorized: check handles and token"
+              Jekyll.logger.warn "Tweetposts:", "Unauthorized: check handle(s) and token"
             else
-              Jekyll.logger.warn "Tweetposts:", "Got unhandled response!"
               Jekyll.logger.warn "Tweetposts:", "  " + response.inspect
-              raise APICache::InvalidResponse
+              #raise APICache::InvalidResponse
             end
           end
         end
@@ -239,7 +243,6 @@ module Jekyll
             # contains url and auth
             JSON.parse(response.body)
           else
-            Jekyll.logger.warn "Tweetposts:", "Got unhandled response!"
             Jekyll.logger.warn "Tweetposts:", "  " + response.inspect
             raise APICache::InvalidResponse
           end
@@ -266,14 +269,19 @@ module Jekyll
         if tweets = retrieve('timeline', signed["url"], {}, { "Authorization" => signed["auth"] }, 5)
           seen_tags = {}
           tweets.select { |tweet|
-            tweet['timestamp'] = DateTime.parse(tweet["created_at"]).new_offset(DateTime.now.offset)
+            urls = tweet["entities"]["urls"].map { |url| url["expanded_url"] }.join(" ")
 
+            tweet['timestamp'] = DateTime.parse(tweet["created_at"]).new_offset(DateTime.now.offset)
             excluded = tweet["timestamp"] < o[:oldest]
 
-            if !excluded && o[:exclusions]
-              urls = tweet["entities"]["urls"].map { |url| url["expanded_url"] }.join(" ")
+            if !excluded && o[:inclusions]
+              excluded = !(o[:inclusions].any? { |w| tweet["full_text"] =~ /([\b#\@]?)#{w}\b/i } ||
+                o[:inclusions].any? { |w| urls =~ /\b#{w}/i })
 
-              excluded ||= o[:exclusions].any? { |w| tweet["full_text"] =~ /([\b#\@]?)#{w}\b/i } ||
+            end
+
+            if !excluded && o[:exclusions]
+              excluded |= o[:exclusions].any? { |w| tweet["full_text"] =~ /([\b#\@]?)#{w}\b/i } ||
                 o[:exclusions].any? { |w| urls =~ /\b#{w}/i }
 
             end
