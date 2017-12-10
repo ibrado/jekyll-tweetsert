@@ -96,15 +96,13 @@ module Jekyll
         end
 
         timeline = config["timeline"]
-        if !timeline.has_key?("access_token")
+        if !timeline.has_key?("access_token") && !ENV['JTP_ACCESS_TOKEN']
           Jekyll.logger.error "Tweetposts:", "Cannot retrieve timelines without access_token"
           Jekyll.logger.error "Tweetposts:", "  Go to http://tweetposts.hook.io/ to get one"
           return
         end
 
-        # TODO: Environment variable
-
-        @access_token = config["timeline"]["access_token"]
+        @access_token = config["timeline"]["access_token"] || ENV['JTP_ACCESS_TOKEN']
 
         embed = config["embed"]
 
