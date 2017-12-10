@@ -1,5 +1,5 @@
 module Jekyll
-  module Tweetposts
+  module Tweetsert
     VERSION = "0.1.0"
   end
 end

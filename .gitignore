@@ -17,4 +17,4 @@ Session.vim
 # rspec failure tracking
 .rspec_status
 
-jekyll-tweetposts*.gem
+jekyll-tweetsert*.gem

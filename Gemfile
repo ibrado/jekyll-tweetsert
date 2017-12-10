@@ -3,5 +3,5 @@ source "http://gemcutter.org"
 
 git_source(:github) {|repo_name| "https://github.com/#{repo_name}" }
 
-# Specify your gem's dependencies in jekyll-tweetposts.gemspec
+# Specify your gem's dependencies in jekyll-tweetsert.gemspec
 gemspec

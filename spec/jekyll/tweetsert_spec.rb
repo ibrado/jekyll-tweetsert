@@ -1,6 +1,6 @@
-RSpec.describe Jekyll::Tweetposts do
+RSpec.describe Jekyll::Tweetsert do
   it "has a version number" do
-    expect(Jekyll::Tweetposts::VERSION).not_to be nil
+    expect(Jekyll::Tweetsert::VERSION).not_to be nil
   end
 
   it "does something useful" do
