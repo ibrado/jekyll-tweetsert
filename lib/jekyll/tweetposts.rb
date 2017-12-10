@@ -151,14 +151,18 @@ module Jekyll
           embed: embed
         }
 
-        handles.each_with_index do |handle, i|
-          counts = generate_posts(site, handle, options)
-          msg = handle+": Generated "+counts[:posts].to_s+" tweetpost(s), "+counts[:tags].to_s+" tag(s)"
-          if category
-            make_cat_index(site, config["category"]["dir"] || "categories", category)
-            msg << ", 1 category" if i.zero?
+        begin
+          handles.each_with_index do |handle, i|
+            counts = generate_posts(site, handle, options)
+            msg = handle+": Generated "+counts[:posts].to_s+" tweetpost(s), "+counts[:tags].to_s+" tag(s)"
+            if category
+              make_cat_index(site, config["category"]["dir"] || "categories", category)
+              msg << ", 1 category" if i.zero?
+            end
+            Jekyll.logger.info "Tweetposts:", msg
           end
-          Jekyll.logger.info "Tweetposts:", msg
+        rescue
+          return
         end
 
       end
