@@ -137,8 +137,8 @@ module Jekyll
         tags_config = config["tags"] || {}
         default_tag = tags_config["default"]
 
-        includes = timeline["include"] || {}
-        excludes = timeline["exclude"] || {}
+        includes = timeline["include"].reject { |w| w.nil? } if timeline["include"]
+        excludes = timeline["exclude"].reject { |w| w.nil? } if timeline["exclude"]
 
         options = {
           oldest: oldest,
@@ -150,8 +150,8 @@ module Jekyll
           retweets: timeline["retweets"] ? '1' : '0',
           hashtags: tags_config["hashtags"],
           default_tag: default_tag,
-          inclusions: includes.reject { |w| w.nil? },
-          exclusions: excludes.reject { |w| w.nil? },
+          inclusions: includes,
+          exclusions: excludes,
           embed: embed
         }
 
