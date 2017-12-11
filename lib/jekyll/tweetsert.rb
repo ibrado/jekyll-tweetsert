@@ -151,6 +151,7 @@ module Jekyll
           retweets: timeline["retweets"] ? '1' : '0',
           hashtags: tags_config["hashtags"],
           default_tag: tags_config["default"],
+          ignore_tags:  tags_config["ignore"] || [],
           inclusions: includes,
           exclusions: excludes,
           embed: config["embed"] || {},
@@ -313,7 +314,7 @@ module Jekyll
 
             if oembed = retrieve('oembed', TWITTER_OEMBED_API, params, {}, 864000)
               # TODO Move stuff over to TweetPost class
-              t = o[:title]
+              t = o[:title] || {}
               prefix = t["prefix"] || ""
               words = t["words"] || 10
               suffix = t["suffix"] || ""
@@ -347,9 +348,11 @@ module Jekyll
 
               if o[:hashtags]
                 tweet_tags << tweet["full_text"].downcase.gsub(/&\S[^;]+;/, '').scan(/[^&]*?#([A-Z0-9_]+)/i).flatten || []
+                tweet_tags.flatten!
+                tweet_tags = tweet_tags - o[:ignore_tags].flatten
               end
 
-              tweetpost.data["tags"] = tweet_tags.flatten
+              tweetpost.data["tags"] = tweet_tags
               tweetpost.data["category"] = o[:category]
 
               o[:properties].each do |prop, value|
