@@ -161,7 +161,7 @@ module Jekyll
             counts = generate_posts(site, handle, options)
             msg = handle+": Generated "+counts[:posts].to_s+" post(s), "+counts[:tags].to_s+" tag(s)"
             if category
-              make_cat_index(site, config["category"]["dir"] || "categories", category)
+              make_cat_index(site, cat_config["dir"] || "categories", category)
               msg += ", 1 category" if !counts[:posts].zero? && cat_count.zero?
               cat_count = 1
             end
