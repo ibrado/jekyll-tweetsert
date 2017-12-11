@@ -143,6 +143,7 @@ module Jekyll
           oldest: oldest,
           newest: newest,
           limit: timeline["limit"] || 100,
+          title: config["title"],
           category: category,
           dir: tags_config["dir"],
           layout: config["layout"] || 'post',
@@ -303,16 +304,6 @@ module Jekyll
           }.each do |tweet|
 
             id = tweet["id"].to_s
-
-            name = "tweet-"+id+".html"
-
-            # TODO Move stuff over to TweetPost class
-            tweetpost = Jekyll::Document.new(File.join(site.source, o[:category], name), { :site => site, :collection => site.posts })
-
-            tweetpost.data["title"] = "tweet "+id
-            tweetpost.data["date"] = tweet['timestamp'].to_time
-            tweetpost.data["layout"] = o[:layout]
-
             params = {
               url: "https://twitter.com/"+handle+"/status/"+ id,
               theme: o[:embed]['theme'] || "light",
@@ -321,9 +312,34 @@ module Jekyll
             }
 
             if oembed = retrieve('oembed', TWITTER_OEMBED_API, params, {}, 864000)
+              # TODO Move stuff over to TweetPost class
+              t = o[:title]
+              prefix = t["prefix"] || ""
+              words = t["words"] || 10
+              suffix = t["suffix"] || ""
+              smart = t["smart"]
+
+              word_limit = (words > 1 ? words - 1 : 9)
+
+              title_base = tweet["full_text"].gsub(/https?:\/\/\S+/, '').
+                split(/\s+/).slice(0 .. word_limit).join(' ') || "Tweet "+id
+
+              m = /^(.*[\.\!\?])[\b\s$]/.match(title_base)
+              title_base = m[1] if m
+
+              suffix = "" if title_base.eql?(tweet['full_text'])
+
+              #name = "tweet-"+id+".html"
+              name = (prefix + title_base).gsub(/[^a-z0-9\-\ ]+/i, '').gsub(' ', '-').downcase + ".html"
+
+              tweetpost = Jekyll::Document.new(File.join(site.source, o[:category], name), { :site => site, :collection => site.posts })
+
               tweetpost.content = '<div class="jekyll-tweetsert">' + oembed["html"] + '</div>'
 
-              tweetpost.data["title"] = tweet["full_text"].split(/\s+/).slice(0 .. 8).join(" ") + ' ...'
+              tweetpost.data["title"] = prefix + title_base + suffix
+
+              tweetpost.data["date"] = tweet['timestamp'].to_time
+              tweetpost.data["layout"] = o[:layout]
               tweetpost.data["excerpt"] = Jekyll::Excerpt.new(tweetpost)
 
               tweet_tags = []
@@ -337,17 +353,16 @@ module Jekyll
               tweetpost.data["category"] = o[:category]
 
               o[:properties].each do |prop, value|
-                if !tweetpost.data.key?(prop)
-                  if value == '$'
-                    tweetpost.data[prop] = oembed['html']
-                  else
-                    tweetpost.data[prop] = value.to_s
-                  end
+                if value == '$'
+                  tweetpost.data[prop] = oembed['html']
+                else
+                  tweetpost.data[prop] = value
                 end
               end
 
               site.posts.docs << tweetpost
 
+              # Create the tag index file
               tweetpost.data["tags"].each do |tag|
                 make_tag_index(site, o[:dir] || "tag", tag)
                 if !seen_tags.has_key?(tag)
