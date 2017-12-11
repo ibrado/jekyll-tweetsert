@@ -16,7 +16,9 @@ module Jekyll
     DEFAULT_REQUEST_HEADERS = { "User-Agent": "Jekyll Tweetsert Plugin/#{VERSION}" }.freeze
     DEFAULT_HTTP_ERROR_JSON = { "html": "Error retrieving URL" }.freeze
 
-    class TweetDoc < Jekyll::Document
+=begin
+    TODO: Move stuff here
+    class TweetPost < Jekyll::Document
       def initialize(path, site, docs, date, id, content)
         @path = path
         @site = site
@@ -27,6 +29,7 @@ module Jekyll
         self.content = content
       end
     end
+=end
 
     class TweetCategoryIndex < Jekyll::Page
       def initialize(site, base, dir, category)
@@ -132,12 +135,9 @@ module Jekyll
         category = cat_config['default'] || ""
 
         tags_config = config["tags"] || {}
-        default_tag = tags_config["default"]
 
         includes = timeline["include"].reject { |w| w.nil? } if timeline["include"]
         excludes = timeline["exclude"].reject { |w| w.nil? } if timeline["exclude"]
-
-        embed = config["embed"] || {}
 
         options = {
           oldest: oldest,
@@ -145,14 +145,15 @@ module Jekyll
           limit: timeline["limit"] || 100,
           category: category,
           dir: tags_config["dir"],
-          layout: (site.layouts.key?(config["layout"]) ? config["layout"] : 'page'),
+          layout: config["layout"] || 'post',
           replies: timeline["replies"] ? '1' : '0',
           retweets: timeline["retweets"] ? '1' : '0',
           hashtags: tags_config["hashtags"],
-          default_tag: default_tag,
+          default_tag: tags_config["default"],
           inclusions: includes,
           exclusions: excludes,
-          embed: embed
+          embed: config["embed"] || {},
+          properties: config["properties"] || {}
         }
 
         begin
@@ -178,27 +179,30 @@ module Jekyll
       end
 
       private
-
       def md5
         return @md5 ||= Digest::MD5::new
       end
 
+      private
       def make_index(site, index)
         index.render(site.layouts, site.site_payload)
         index.write(site.dest)
         site.pages << index
       end
 
+      private
       def make_tag_index(site, dir, tag)
         index = TweetTagIndex.new(site, site.source, File.join(dir, tag), tag)
         make_index(site, index)
       end
 
+      private
       def make_cat_index(site, dir, category)
         index = TweetCategoryIndex.new(site, site.source, File.join(dir, category), category)
         make_index(site, index)
       end
 
+      private
       def retrieve(type, url, params, headers, cache)
         uri = URI(url)
 
@@ -231,6 +235,7 @@ module Jekyll
         end
       end
 
+      private
       def sign_timeline_request(params)
         uri = URI(REQUEST_SIGNER)
 
@@ -254,6 +259,7 @@ module Jekyll
         end
       end
 
+      private
       def generate_posts(site, handle, o)
         params = {
           handle: handle,
@@ -296,53 +302,61 @@ module Jekyll
 
           }.each do |tweet|
 
-            if o[:layout]
-              id = tweet["id"].to_s
+            id = tweet["id"].to_s
 
-              name = "tweet-"+id+".html"
+            name = "tweet-"+id+".html"
 
-              tweetpost = Jekyll::Document.new(File.join(site.source, o[:category], name), { :site => site, :collection => site.posts })
+            # TODO Move stuff over to TweetPost class
+            tweetpost = Jekyll::Document.new(File.join(site.source, o[:category], name), { :site => site, :collection => site.posts })
 
-              tweetpost.data["title"] = "tweet "+id
-              tweetpost.data["date"] = tweet['timestamp'].to_time
-              tweetpost.data["layout"] = "page"
+            tweetpost.data["title"] = "tweet "+id
+            tweetpost.data["date"] = tweet['timestamp'].to_time
+            tweetpost.data["layout"] = o[:layout]
 
-              params = {
-                url: "https://twitter.com/"+handle+"/status/"+ id,
-                theme: o[:embed]['theme'] || "light",
-                link_color: o[:embed]["link_color"],
-                omit_script: o[:embed]["omit_script"]
-              }
+            params = {
+              url: "https://twitter.com/"+handle+"/status/"+ id,
+              theme: o[:embed]['theme'] || "light",
+              link_color: o[:embed]["link_color"],
+              omit_script: o[:embed]["omit_script"]
+            }
 
-              if oembed = retrieve('oembed', TWITTER_OEMBED_API, params, {}, 864000)
-                tweetpost.content = '<div class="jekyll-tweetsert">' + oembed["html"] + '</div>'
+            if oembed = retrieve('oembed', TWITTER_OEMBED_API, params, {}, 864000)
+              tweetpost.content = '<div class="jekyll-tweetsert">' + oembed["html"] + '</div>'
 
-                tweetpost.data["title"] = tweet["full_text"].split(/\s+/).slice(0 .. 8).join(" ") + ' ...'
-                tweetpost.data["excerpt"] = Jekyll::Excerpt.new(tweetpost)
+              tweetpost.data["title"] = tweet["full_text"].split(/\s+/).slice(0 .. 8).join(" ") + ' ...'
+              tweetpost.data["excerpt"] = Jekyll::Excerpt.new(tweetpost)
 
-                tweet_tags = []
-                tweet_tags << o[:default_tag] if o[:default_tag] && !o[:default_tag].empty?
+              tweet_tags = []
+              tweet_tags << o[:default_tag] if o[:default_tag] && !o[:default_tag].empty?
 
-                if o[:hashtags]
-                  tweet_tags << tweet["full_text"].downcase.gsub(/&\S[^;]+;/, '').scan(/[^&]*?#([A-Z0-9_]+)/i).flatten || []
-                end
-
-                tweetpost.data["tags"] = tweet_tags.flatten
-                tweetpost.data["category"] = o[:category]
-
-                site.posts.docs << tweetpost
-
-                tweetpost.data["tags"].each do |tag|
-                  make_tag_index(site, o[:dir] || "tag", tag)
-                  if !seen_tags.has_key?(tag)
-                    tag_count += 1
-                    seen_tags[o[:default_tag]] = 1
-                  end
-                end
-
-                post_count += 1
+              if o[:hashtags]
+                tweet_tags << tweet["full_text"].downcase.gsub(/&\S[^;]+;/, '').scan(/[^&]*?#([A-Z0-9_]+)/i).flatten || []
               end
 
+              tweetpost.data["tags"] = tweet_tags.flatten
+              tweetpost.data["category"] = o[:category]
+
+              o[:properties].each do |prop, value|
+                if !tweetpost.data.key?(prop)
+                  if value == '$'
+                    tweetpost.data[prop] = oembed['html']
+                  else
+                    tweetpost.data[prop] = value.to_s
+                  end
+                end
+              end
+
+              site.posts.docs << tweetpost
+
+              tweetpost.data["tags"].each do |tag|
+                make_tag_index(site, o[:dir] || "tag", tag)
+                if !seen_tags.has_key?(tag)
+                  tag_count += 1
+                  seen_tags[o[:default_tag]] = 1
+                end
+              end
+
+              post_count += 1
             end
           end
         end
