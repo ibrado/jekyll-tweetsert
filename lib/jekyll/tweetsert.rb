@@ -160,12 +160,14 @@ module Jekyll
         }
 
         begin
-          handles.each_with_index do |handle, i|
+          cat_count = 0
+          handles.each do |handle|
             counts = generate_posts(site, handle, options)
-            msg = handle+": Generated "+counts[:posts].to_s+" tweetpost(s), "+counts[:tags].to_s+" tag(s)"
+            msg = handle+": Generated "+counts[:posts].to_s+" post(s), "+counts[:tags].to_s+" tag(s)"
             if category
               make_cat_index(site, config["category"]["dir"] || "categories", category)
-              msg << ", 1 category" if i.zero?
+              msg << ", 1 category" if !counts[:posts].zero? && cat_count.zero?
+              cat_count = 1
             end
             Jekyll.logger.info "Tweetsert:", msg
           end
