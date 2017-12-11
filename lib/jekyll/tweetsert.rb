@@ -147,6 +147,7 @@ module Jekyll
           category: category,
           dir: tags_config["dir"],
           layout: config["layout"] || 'post',
+          tag_index: tags_config["layout"],
           replies: timeline["replies"] ? '1' : '0',
           retweets: timeline["retweets"] ? '1' : '0',
           hashtags: tags_config["hashtags"],
@@ -367,7 +368,9 @@ module Jekyll
 
               # Create the tag index file
               tweetpost.data["tags"].each do |tag|
-                make_tag_index(site, o[:dir] || "tag", tag)
+                if o[:tag_index] && site.layouts.key?(o[:tag_index])
+                  make_tag_index(site, o[:dir] || "tag", tag)
+                end
                 if !seen_tags.has_key?(tag)
                   tag_count += 1
                   seen_tags[o[:default_tag]] = 1
