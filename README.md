@@ -83,7 +83,7 @@ tweetsert:
     exclude:
       - 'https://example.org/\d+/' # Your own blog posts
       #- 'ignore'
-      #- '#pebble'
+      #- '#somehash'
       #- '@handle'
 
     # Do not include tweets newer than your latest post; default true
