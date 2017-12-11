@@ -145,7 +145,7 @@ module Jekyll
           limit: timeline["limit"] || 100,
           category: category,
           dir: tags_config["dir"],
-          layout: (site.layouts.key? config["layout"] || 'page'),
+          layout: (site.layouts.key?(config["layout"]) ? config["layout"] : 'page'),
           replies: timeline["replies"] ? '1' : '0',
           retweets: timeline["retweets"] ? '1' : '0',
           hashtags: tags_config["hashtags"],
@@ -160,7 +160,7 @@ module Jekyll
           handles.each do |handle|
             counts = generate_posts(site, handle, options)
             msg = handle+": Generated "+counts[:posts].to_s+" post(s), "+counts[:tags].to_s+" tag(s)"
-            if category
+            if !category.empty?
               make_cat_index(site, cat_config["dir"] || "categories", category)
               msg += ", 1 category" if !counts[:posts].zero? && cat_count.zero?
               cat_count = 1
