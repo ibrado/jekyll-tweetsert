@@ -125,8 +125,8 @@ module Jekyll
           end
         end
 
-        oldest = DateTime.new() if !no_older
-        newest = DateTime.now() if !no_newer
+        oldest = DateTime.new() if !no_older || site.posts.docs.length.zero?
+        newest = DateTime.now() if !no_newer || site.posts.docs.length.zero?
 
         handles = []
         handles << timeline["handle"] if timeline["handle"]
@@ -301,7 +301,6 @@ module Jekyll
           }.each do |tweet|
 
             if o[:layout]
-              date = tweet['timestamp'].strftime('%Y-%m-%d %H:%M:%S %z')
               id = tweet["id"].to_s
 
               name = "tweet-"+id+".html"
@@ -309,7 +308,7 @@ module Jekyll
               tweetpost = Jekyll::Document.new(File.join(site.source, o[:category], name), { :site => site, :collection => site.posts })
 
               tweetpost.data["title"] = "tweet "+id
-              tweetpost.data["date"] = tweet["timestamp"]
+              tweetpost.data["date"] = tweet['timestamp'].to_time
               tweetpost.data["layout"] = "page"
 
               params = {
