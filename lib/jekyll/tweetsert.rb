@@ -166,9 +166,10 @@ module Jekyll
             msg = handle+": Generated "+counts[:posts].to_s+" post(s), "+counts[:tags].to_s+" tag(s)"
             if category
               make_cat_index(site, config["category"]["dir"] || "categories", category)
-              msg << ", 1 category" if !counts[:posts].zero? && cat_count.zero?
+              msg += ", 1 category" if !counts[:posts].zero? && cat_count.zero?
               cat_count = 1
             end
+            msg += "; excluded "+counts[:excluded].to_s+" tweets"
             Jekyll.logger.info "Tweetsert:", msg
           end
         rescue Exception => e
@@ -273,6 +274,7 @@ module Jekyll
 
         post_count = 0
         tag_count = 0
+        exclude_count = 0
 
         if tweets = retrieve('timeline', signed["url"], {}, { "Authorization" => signed["auth"] }, 5)
           seen_tags = {}
@@ -293,6 +295,7 @@ module Jekyll
                 o[:exclusions].any? { |w| urls =~ /\b#{w}/i }
             end
 
+            exclude_count += 1 if excluded
             !excluded
 
           }.each do |tweet|
@@ -352,7 +355,8 @@ module Jekyll
 
         return {
           :posts => post_count,
-          :tags => tag_count
+          :tags => tag_count,
+          :excluded => exclude_count
         }
 
       end # def
