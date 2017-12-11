@@ -31,70 +31,85 @@ module Jekyll
     end
 =end
 
-    class TweetCategoryIndex < Jekyll::Page
-      attr_reader :layout
+    def self.debug_state(state)
+      @debug = state
+    end
 
-      def initialize(site, base, dir, category)
+    def self.debug(msg)
+      puts "DEBUG> #{msg}" if @debug
+    end
+
+    def self.info(msg)
+      Jekyll.logger.info "Tweetsert:", msg
+    end
+
+    def self.warn(msg)
+      Jekyll.logger.warn "Tweetsert:", msg
+    end
+
+    def self.error(msg)
+      Jekyll.logger.error "Tweetsert:", msg
+    end
+
+    def self.backtrace(e)
+      puts e.backtrace if @debug
+    end
+
+    class TweetIndex < Jekyll::Page
+      def initialize(site, dir, value)
         @site = site
-        @base = base
         @dir = dir
+        @base = @site.source
         @name = 'index.html'
+        @value = value
+
+        @config ||= @type
 
         self.process(@name)
 
-        cat_config = site.config['tweetsert']['category'] || {}
+        idx_config = site.config['tweetsert'][@config] || {}
 
-        cat_layout = cat_config["layout"] || "category_index"
-        if site.layouts.key?(cat_layout)
-          layout_file = cat_layout + site.layouts[cat_layout].ext
-          @layout = cat_layout
-        else
-          @layout = nil
+        idx_layout = idx_config["layout"] || @type+"_index"
+
+        if site.layouts.key?(idx_layout)
+          layout_file = idx_layout + site.layouts[idx_layout].ext
+          @layout = idx_layout
         end
 
         if !@layout.nil?
-          self.read_yaml(File.join(base, '_layouts'), layout_file)
-          self.data['category'] = category
+          self.read_yaml(File.join(@base, '_layouts'), layout_file)
+          self.data[@type] = @value
 
-          prefix = cat_config.has_key?("title") ? cat_config['title']['prefix'] : ""
-          suffix = cat_config.has_key?("title") ? cat_config['title']['suffix'] : ""
+          prefix = idx_config.has_key?("title") ? idx_config['title']['prefix'] : ""
+          suffix = idx_config.has_key?("title") ? idx_config['title']['suffix'] : ""
 
-          self.data['title'] = prefix + category + suffix
+          self.data['title'] = prefix + @value + suffix
+        end
+      end
+
+      def generate()
+        if @layout.nil?
+          Tweetsert::warn "#{@type} layout for #{@value} not found"
+        else
+          self.render(@site.layouts, @site.site_payload)
+          self.write(@site.dest)
+          @site.pages << self
         end
       end
     end
 
+    class TweetCategoryIndex < TweetIndex
+      def initialize(site, dir, value)
+        @type = "category"
+        super
+      end
+    end
 
-    class TweetTagIndex < Jekyll::Page
-      attr_reader :layout
-
-      def initialize(site, base, dir, tag)
-        @site = site
-        @base = base
-        @dir = dir
-        @name = 'index.html'
-
-        self.process(@name)
-
-        tag_config = site.config['tweetsert']['tags'] || {}
-
-        tag_layout = tag_config["layout"] || "tag_index"
-        if site.layouts.key?(tag_layout)
-          layout_file = tag_layout + site.layouts[tag_layout].ext
-          @layout = tag_layout
-        else
-          @layout = nil
-        end
-
-        if !@layout.nil?
-          self.read_yaml(File.join(base, '_layouts'), layout_file)
-          self.data['tag'] = tag
-
-          prefix = tag_config.has_key?("title") ? tag_config['title']['prefix'] : ""
-          suffix = tag_config.has_key?("title") ? tag_config['title']['suffix'] : ""
-
-          self.data['title'] = prefix + tag + suffix
-        end
+    class TweetTagIndex < TweetIndex
+      def initialize(site, dir, value)
+        @config = "tags"
+        @type = "tag"
+        super
       end
     end
 
@@ -108,19 +123,21 @@ module Jekyll
           return
         end
 
+        Tweetsert::debug_state config["debug"]
+
         if !config.has_key?("timeline")
-          Jekyll.logger.error "Tweetsert:", "Timeline configuration not found"
+          Tweetsert::error "Timeline configuration not found"
           return
         end
 
         timeline = config["timeline"]
         if !timeline.has_key?("access_token") && !ENV['JTP_ACCESS_TOKEN']
-          Jekyll.logger.error "Tweetsert:", "Cannot retrieve timelines without access_token"
-          Jekyll.logger.error "Tweetsert:", "  Go to http://tweetsert.hook.io/ to get one"
+          Tweetsert::error "Cannot retrieve timelines without access_token"
+          Tweetsert::error "  Go to http://tweetsert.hook.io/ to get one"
           return
         end
 
-        @access_token = config["timeline"]["access_token"] || ENV['JTP_ACCESS_TOKEN']
+        @access_token = ENV['JTP_ACCESS_TOKEN'] || timeline["access_token"]
 
         APICache.store = Moneta.new(:File, dir: './.tweetsert-cache')
 
@@ -144,12 +161,10 @@ module Jekyll
           end
         end
 
-        oldest = DateTime.new() if !no_older || site.posts.docs.length.zero?
-        newest = DateTime.now() if !no_newer || site.posts.docs.length.zero?
+        oldest = DateTime.new() if !no_older || site.posts.docs.empty?
+        newest = DateTime.now() if !no_newer || site.posts.docs.empty?
 
-        handles = []
-        handles << timeline["handle"] if timeline["handle"]
-        (handles << timeline["handles"]).flatten! if timeline["handles"]
+        handles = [ timeline['handle'], timeline["handles"] ].flatten.compact;
 
         cat_config = config["category"] || {}
         category = cat_config['default'] || ""
@@ -183,20 +198,21 @@ module Jekyll
           cat_count = 0
           handles.each do |handle|
             counts = generate_posts(site, handle, options)
-            msg = handle+": Generated "+counts[:posts].to_s+" post(s), "+counts[:tags].to_s+" tag(s)"
+            msg = "#{handle}: Generated #{counts[:posts].to_s} post(s), #{counts[:tags].to_s} tag(s)"
             if !category.empty?
               make_cat_index(site, cat_config["dir"] || "categories", category)
               msg += ", 1 category" if !counts[:posts].zero? && cat_count.zero?
               cat_count = 1
             end
-            msg += "; excluded "+counts[:excluded].to_s+" tweet(s)"
-            Jekyll.logger.info "Tweetsert:", msg
+            msg += "; excluded #{counts[:excluded].to_s} tweet(s)"
+            Tweetsert::info msg
           end
+
         rescue Exception => e
           ln = e.backtrace[0].split(':')[1]
-          Jekyll.logger.error "Tweetsert:", e.message + " at line " + ln
-          puts e.backtrace
-          return
+          Tweetsert::error "#{e.message} at line #{ln}"
+          Tweetsert::backtrace e
+          throw e
         end
 
       end
@@ -207,26 +223,13 @@ module Jekyll
       end
 
       private
-      def make_index(site, index)
-        if index.layout.nil?
-          Jekyll.logger.warn "Tweetsert:", "Layout not found"
-        else
-          index.render(site.layouts, site.site_payload)
-          index.write(site.dest)
-          site.pages << index
-        end
-      end
-
-      private
       def make_tag_index(site, dir, tag)
-        index = TweetTagIndex.new(site, site.source, File.join(dir, tag), tag)
-        make_index(site, index)
+        TweetTagIndex.new(site, File.join(dir, tag), tag).generate()
       end
 
       private
       def make_cat_index(site, dir, category)
-        index = TweetCategoryIndex.new(site, site.source, File.join(dir, category), category)
-        make_index(site, index)
+        TweetCategoryIndex.new(site, File.join(dir, category), category).generate()
       end
 
       private
@@ -253,10 +256,15 @@ module Jekyll
             when Net::HTTPSuccess
               JSON.parse(response.body)
             when Net::HTTPUnauthorized
-              Jekyll.logger.warn "Tweetsert:", "Unauthorized: check handle(s) and token"
+              Jekyll::Tweetsert::warn "Unauthorized: check token"
+              {}
+            when Net::HTTPNotFound
+              Jekyll::Tweetsert::warn "Not found: check handle"
+              {}
             else
-              Jekyll.logger.warn "Tweetsert:", "  " + response.inspect
-              #raise APICache::InvalidResponse
+              Jekyll::Tweetsert::error "Unknown response"
+              Jekyll::Tweetsert::error "  #{response.inspect}"
+              {}
             end
           end
         end
@@ -280,8 +288,8 @@ module Jekyll
             # contains url and auth
             JSON.parse(response.body)
           else
-            Jekyll.logger.warn "Tweetsert:", "  " + response.inspect
-            raise APICache::InvalidResponse
+            Tweetsert::warn "Unable to sign request"
+            Tweetsert::debug "  #{response.inspect}"
           end
         end
       end
@@ -297,7 +305,7 @@ module Jekyll
 
         signed = sign_timeline_request(params)
         if signed.nil?
-          Jekyll.logger.error "Tweetsert:", "Cannot retrieve timeline of "+o[:handle]
+          Tweetsert::error "Cannot retrieve timeline of #{o[:handle]}"
           return
         end
 
@@ -331,7 +339,7 @@ module Jekyll
 
             id = tweet["id"].to_s
             params = {
-              url: "https://twitter.com/"+handle+"/status/"+ id,
+              url: "https://twitter.com/#{handle}/status/#{id}",
               theme: o[:embed]['theme'] || "light",
               link_color: o[:embed]["link_color"],
               omit_script: o[:embed]["omit_script"]
@@ -392,9 +400,7 @@ module Jekyll
 
               # Create the tag index file
               tweetpost.data["tags"].each do |tag|
-                if o[:tag_index] && site.layouts.key?(o[:tag_index])
-                  make_tag_index(site, o[:dir] || "tag", tag)
-                end
+                make_tag_index(site, o[:dir] || "tag", tag) if o[:tag_index]
                 if !seen_tags.has_key?(tag)
                   tag_count += 1
                   seen_tags[o[:default_tag]] = 1
