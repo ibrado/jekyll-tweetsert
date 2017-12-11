@@ -32,6 +32,8 @@ module Jekyll
 =end
 
     class TweetCategoryIndex < Jekyll::Page
+      attr_reader :layout
+
       def initialize(site, base, dir, category)
         @site = site
         @base = base
@@ -42,20 +44,30 @@ module Jekyll
 
         cat_config = site.config['tweetsert']['category'] || {}
 
-        layout = cat_config["layout"] || "category_index.html"
-        self.read_yaml(File.join(base, '_layouts'), layout)
+        cat_layout = cat_config["layout"] || "category_index"
+        if site.layouts.key?(cat_layout)
+          layout_file = cat_layout + site.layouts[cat_layout].ext
+          @layout = cat_layout
+        else
+          @layout = nil
+        end
 
-        self.data['category'] = category
+        if !@layout.nil?
+          self.read_yaml(File.join(base, '_layouts'), layout_file)
+          self.data['category'] = category
 
-        prefix = cat_config.has_key?("title") ? cat_config['title']['prefix'] : ""
-        suffix = cat_config.has_key?("title") ? cat_config['title']['suffix'] : ""
+          prefix = cat_config.has_key?("title") ? cat_config['title']['prefix'] : ""
+          suffix = cat_config.has_key?("title") ? cat_config['title']['suffix'] : ""
 
-        self.data['title'] = prefix + category + suffix
+          self.data['title'] = prefix + category + suffix
+        end
       end
     end
 
 
     class TweetTagIndex < Jekyll::Page
+      attr_reader :layout
+
       def initialize(site, base, dir, tag)
         @site = site
         @base = base
@@ -64,17 +76,25 @@ module Jekyll
 
         self.process(@name)
 
-        tag_config = site.config['tweetsert']['tags']
+        tag_config = site.config['tweetsert']['tags'] || {}
 
-        layout = tag_config["layout"] || "tag_index.html"
-        self.read_yaml(File.join(base, '_layouts'), layout)
+        tag_layout = tag_config["layout"] || "tag_index"
+        if site.layouts.key?(tag_layout)
+          layout_file = tag_layout + site.layouts[tag_layout].ext
+          @layout = tag_layout
+        else
+          @layout = nil
+        end
 
-        self.data['tag'] = tag
+        if !@layout.nil?
+          self.read_yaml(File.join(base, '_layouts'), layout_file)
+          self.data['tag'] = tag
 
-        prefix = tag_config.has_key?("title") ? tag_config['title']['prefix'] : ""
-        suffix = tag_config.has_key?("title") ? tag_config['title']['suffix'] : ""
+          prefix = tag_config.has_key?("title") ? tag_config['title']['prefix'] : ""
+          suffix = tag_config.has_key?("title") ? tag_config['title']['suffix'] : ""
 
-        self.data['title'] = prefix + tag + suffix
+          self.data['title'] = prefix + tag + suffix
+        end
       end
     end
 
@@ -175,7 +195,7 @@ module Jekyll
         rescue Exception => e
           ln = e.backtrace[0].split(':')[1]
           Jekyll.logger.error "Tweetsert:", e.message + " at line " + ln
-          #puts e.backtrace
+          puts e.backtrace
           return
         end
 
@@ -188,9 +208,13 @@ module Jekyll
 
       private
       def make_index(site, index)
-        index.render(site.layouts, site.site_payload)
-        index.write(site.dest)
-        site.pages << index
+        if index.layout.nil?
+          Jekyll.logger.warn "Tweetsert:", "Layout not found"
+        else
+          index.render(site.layouts, site.site_payload)
+          index.write(site.dest)
+          site.pages << index
+        end
       end
 
       private
