@@ -48,7 +48,7 @@ tweetsert:
     handle: 'ibrado'
 
     # Other handles you want to include
-    # If you get an Invalid Response, you may have misspelled a handle
+    # If you get an 404 Not Found, you may have misspelled a handle
     #handles:
     #  - 'somehandle'
     #  - 'anotherhandle'
@@ -86,8 +86,11 @@ tweetsert:
       #- '#pebble'
       #- '@handle'
 
-    # Limit to tweets more recent than your oldest post; default true
-    #stop_at_oldest_post: false
+    # Do not include tweets newer than your latest post; default true
+    #no_newer: false
+
+    # Do not include tweets older than your first post; default true
+    #no_older: false
 
   embed:
     # Set to dark if you want a dark background/light text; default: light
