@@ -33,10 +33,8 @@ In compliance with the spirit of Twitter's API usage guidelines, you will need a
 
 You will be directed to Twitter's OAuth system. Once you grant permission (read-only), you will be presented with a token that you then place into your `_config.yml`. If you don't want to do that, you may use the environment variable **`JTP_ACCESS_TOKEN`** instead.
 
-```
-$ export JTP_ACCESS_TOKEN="..."
-$ jekyll serve
-```
+    $ export JTP_ACCESS_TOKEN="..."
+    $ jekyll serve
 
 ## Usage
 
@@ -256,18 +254,39 @@ tweetsert:
 
 ## Cache
 
-*Tweetsert* caches Twitter's oEmbed results in a hidden folder, `.tweetsert-cache`. You may delete this if you encounter problems that you think might be related to the cache.
+*Tweetsert* caches Twitter's timelines and oEmbed results in a hidden folder, `.tweetsert-cache`. You may delete this if you encounter problems that you think might be related to the cache.
 
 ## Further configuration
 
-You may want to edit your `home` layout to make the imported tweets look different from the regular ones, for instance,
+The embedded tweet is wrapped inside a `<div class="jekyll-tweetsert">`. You may adjust its appearance via CSS:
 
+```css
+.jekyll-tweetsert {
+  clear: both;
+  width: auto;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: max-content;
+}
 ```
+
+If you'd rather access the embedded tweet directly, use a property:
+
+```yaml
+  properties:
+    tweet_html: $
+```
+
+and include it as `{{ post.tweet_html }}` or `{{ page.tweet_html }}`
+
+You may also want to edit your `home` layout to make the imported tweets look different from the regular ones, for instance,
+
+```html
 {% for post in site.posts %}
   {% if post.tags contains "tweet" %}
 	<br/>
   {% else %}
-    <!-- normally post header -->
+    <!-- normal post header -->
   {% endif %}
 {% endfor %}
 ```
