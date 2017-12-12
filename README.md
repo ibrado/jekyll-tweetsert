@@ -142,8 +142,8 @@ tweetsert:
     dir: ""                            # Folder that contains your categories
     #dir: "categories"                 # Default
 
-    layout: "cat_index.html"           # What layout to use, inside _layouts
-    #layout: "category_index.html"     # Default
+    layout: "cat_index"                # What layout to use, inside _layouts
+    #layout: "category_index"          # Default
 
     #title:
     #  prefix: "Posts in the &laquo;"  # Prefix of the generated title
@@ -152,12 +152,12 @@ tweetsert:
   tags:
     #default: "tweet"                  # Tag all tweets automatically with this
     dir: "tag"                         # Location of the generated tag indices
-    layout: "tag_index.html"           #  As above, for tags
+    layout: "tag_index"                #  As above, for tags
     #title:
     #  prefix: "Posts tagged &ldquo;"
     #  suffix: "&rdquo;"
 
-    #hashtags: true                     # Import #hashtags as site tags
+    hashtags: true                     # Import #hashtags as site tags
 
     # Hashtags you don't want to import
     ignore:
