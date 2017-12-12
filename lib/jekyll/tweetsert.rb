@@ -176,6 +176,7 @@ module Jekyll
           newest: newest,
           limit: timeline["limit"] || 100,
           title: config["title"],
+          excerpts: timeline["excerpts"].nil? || timeline["excerpts"],
           category: category,
           dir: tags_config["dir"],
           layout: config["layout"] || 'post',
@@ -374,7 +375,10 @@ module Jekyll
 
               tweetpost.data["date"] = tweet['timestamp'].to_time
               tweetpost.data["layout"] = o[:layout]
-              tweetpost.data["excerpt"] = Jekyll::Excerpt.new(tweetpost)
+
+              if o[:embed]["excerpts"].nil? || o[:embed]["excerpts"]
+                tweetpost.data["excerpt"] = Jekyll::Excerpt.new(tweetpost)
+              end
 
               tweet_tags = [o[:default_tag]].compact
 
