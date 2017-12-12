@@ -376,7 +376,7 @@ module Jekyll
               tweetpost.data["layout"] = o[:layout]
               tweetpost.data["excerpt"] = Jekyll::Excerpt.new(tweetpost)
 
-              tweet_tags = [o[:default_tag]]
+              tweet_tags = [o[:default_tag]].compact
 
               plain_text = tweet["full_text"].downcase.gsub(/&\S[^;]+;/, '');
 
