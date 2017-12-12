@@ -163,7 +163,7 @@ tweetsert:
     ignore:
       - blahblah
 
-	# Automatic tagging based on content, tag: <string or array>
+    # Automatic tagging based on content, tag: <string or array>
     #auto:
     #  keepkey: "@bitcoinkeepkey"
     #  ethereum: "ethereum"
