@@ -10,11 +10,8 @@ require "moneta"
 module Jekyll
   module Tweetsert
     REQUEST_SIGNER = "https://hook.io/tweetsert/sign".freeze
-
     TWITTER_OEMBED_API = "https://publish.twitter.com/oembed".freeze
-
     DEFAULT_REQUEST_HEADERS = { "User-Agent": "Jekyll Tweetsert Plugin/#{VERSION}" }.freeze
-    DEFAULT_HTTP_ERROR_JSON = { "html": "Error retrieving URL" }.freeze
 
 =begin
     TODO: Move stuff here
@@ -187,7 +184,8 @@ module Jekyll
           retweets: timeline["retweets"] ? '1' : '0',
           hashtags: tags_config["hashtags"],
           default_tag: tags_config["default"],
-          ignore_tags:  tags_config["ignore"] || [],
+          ignore_tags: tags_config["ignore"] || [],
+          auto_tags: tags_config["auto"] || {},
           inclusions: includes,
           exclusions: excludes,
           embed: config["embed"] || {},
@@ -245,7 +243,7 @@ module Jekyll
 
         unique_type = type + "-" + md5.hexdigest
 
-        APICache.get(unique_type, { :cache => cache, :fail => DEFAULT_HTTP_ERROR_JSON }) do
+        APICache.get(unique_type, { :cache => cache, :fail => {} }) do
           Net::HTTP.start(uri.host, uri.port, :use_ssl => uri.scheme == 'https' ) do |http|
             req = Net::HTTP::Get.new(uri.path + qs)
             headers.merge!(DEFAULT_REQUEST_HEADERS).each { |k, v| req[k] = v }
@@ -346,7 +344,9 @@ module Jekyll
             }
 
             if oembed = retrieve('oembed', TWITTER_OEMBED_API, params, {}, 864000)
+
               # TODO Move stuff over to TweetPost class
+
               t = o[:title] || {}
               prefix = t["prefix"] || ""
               words = t["words"] || 10
@@ -376,13 +376,22 @@ module Jekyll
               tweetpost.data["layout"] = o[:layout]
               tweetpost.data["excerpt"] = Jekyll::Excerpt.new(tweetpost)
 
-              tweet_tags = []
-              tweet_tags << o[:default_tag] if o[:default_tag] && !o[:default_tag].empty?
+              tweet_tags = [o[:default_tag]]
+
+              plain_text = tweet["full_text"].downcase.gsub(/&\S[^;]+;/, '');
 
               if o[:hashtags]
-                tweet_tags << tweet["full_text"].downcase.gsub(/&\S[^;]+;/, '').scan(/[^&]*?#([A-Z0-9_]+)/i).flatten || []
+                tweet_tags << plain_text.scan(/[^&]*?#([A-Z0-9_]+)/i).flatten || []
                 tweet_tags.flatten!
-                tweet_tags = tweet_tags - o[:ignore_tags].flatten
+                tweet_tags -= o[:ignore_tags].flatten
+              end
+
+              o[:auto_tags].each do |tag, pat|
+                [ pat ].flatten.compact.each do |re|
+                  if plain_text.match(/#{Regexp.escape(re)}/i) && !tweet_tags.include?(tag)
+                    tweet_tags << tag
+                  end
+                end
               end
 
               tweetpost.data["tags"] = tweet_tags
