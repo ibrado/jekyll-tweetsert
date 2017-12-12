@@ -364,10 +364,11 @@ module Jekyll
 
               suffix = "" if title_base.eql?(tweet['full_text'])
 
-              #name = "tweet-"+id+".html"
-              name = (prefix + title_base).gsub(/[^a-z0-9\-\ ]+/i, '').gsub(' ', '-').downcase + ".html"
+              name = (prefix + title_base).gsub(/[^a-z0-9\-\ ]+/i, '').
+                gsub(' ', '-').downcase + ".html"
 
-              tweetpost = Jekyll::Document.new(File.join(site.source, o[:category], name), { :site => site, :collection => site.posts })
+              tweetpost = Jekyll::Document.new(File.join(site.source, o[:category], name),
+                { :site => site, :collection => site.posts })
 
               tweetpost.content = '<div class="jekyll-tweetsert">' + oembed["html"] + '</div>'
 
