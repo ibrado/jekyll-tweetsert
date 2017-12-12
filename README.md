@@ -103,14 +103,15 @@ tweetsert:
     #  (case insensitive regex)
     #include:
       #- '#blog'
-      #- '(^|[^@\w])@(\w{1,15})\b' # Must mention @someone
+      #- '(^|[^@\w])@(\w{1,15})\b'  # Must mention @someone
       #- 'important'
       #- '@handle'
 
     # Exclude tweets that have these words/handles/hashtags/URLs
     #   (case insensitive regex)
     exclude:
-      - 'https://example.org/\d+/' # Your own blog posts
+      - 'https://example.org/\d+/'  # Your own blog posts
+      - '^.@'                       # Tweets that start with .@someone
       #- 'ignore'
       #- '#somehash'
       #- '@handle'
@@ -210,6 +211,7 @@ tweetsert:
 
     exclude:
       - 'https://example.org/\d+/'
+      - '^.@'
 
     no_newer: true
     no_older: false
