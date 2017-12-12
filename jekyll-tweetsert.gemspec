@@ -9,8 +9,8 @@ Gem::Specification.new do |spec|
   spec.authors       = ["Alex Ibrado"]
   spec.email         = ["alex@ibrado.org"]
 
-  spec.summary       = %q{Tweet Retriever and Post Generator for Jekyll}
-  spec.description   = %q{This plugin retrieves tweets from a Twitter timeline and creates new posts with a default layout of 'tweet'. These are dated according to the original tweet timestamp and may be rendered differently in the homepage.}
+  spec.summary       = %q{Tweetsert: tweet post generator for Jekyll}
+  spec.description   = %q{This plugin retrieves tweets from one or more Twitter timelines and inserts them as posts. The tweets may be filtered by content and date, hashtags may be imported, and posts can be automatically categorized or tagged, by default or depending on content. Dark/light themes and custom link colors are supported.}
   spec.homepage      = "https://github.com/ibrado/jekyll-tweetsert"
   spec.license       = "MIT"
 
