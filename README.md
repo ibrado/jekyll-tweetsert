@@ -1,5 +1,7 @@
 # Jekyll::Tweetsert
 
+*Version 1.0.0*
+
 *Tweetsert* is a plugin for Jekyll that pulls recent tweets from one or more Twitter handles, then inserts them (dated appropriately) as regular posts on your site. You can specify which tweets to include or exclude based on patterns or words, import retweets and replies, and tweak the theme and link colors of the embedded tweet.
 
 To organize your tweet-posts, Tweetsert can automatically assign a category and/or tag. You may also choose to automatically import Twitter hashtags.
