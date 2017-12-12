@@ -27,20 +27,51 @@ Or install it yourself as:
 
     $ gem install jekyll-tweetsert
 
-In compliance with the spirit of Twitter's API usage guidelines, you will need an access token. Get it here: 
+In compliance with the spirit of Twitter's API usage guidelines, you will need an access token. Get it here:
 
-**[tweetsert.hook.io](http://tweetsert.hook.io)**
+> **[tweetsert.hook.io](http://tweetsert.hook.io)**
 
-You will be directed to Twitter's OAuth system. Once you allow read-only permission, you will be presented with a token that you then place into your `_config.yml`. If you don't want to do that, you may use the environment variable **`JTP_ACCESS_TOKEN`** instead.
+You will be directed to Twitter's OAuth system. Once you grant permission (read-only), you will be presented with a token that you then place into your `_config.yml`. If you don't want to do that, you may use the environment variable **`JTP_ACCESS_TOKEN`** instead.
+
+```
+$ export JTP_ACCESS_TOKEN="..."
+$ jekyll serve
+```
 
 ## Usage
 
+The minimum configuration to run *Tweetsert* is the following:
+
+```yaml
+tweetsert:
+  enabled: true
+  timeline:
+    handle: 'ibrado'
+    access_token: "12345678-aBcDeFgHiJkLmNoPqRsTuVwXyZajni01234567890"
+```
+
 Here is a sample `_config.yml` section, with comments:
 
-```ruby
+```yaml
 tweetsert:
   enabled: true
   layout: "tweet" # Template in _layouts to use; default "page"
+
+  # Show additional messages for debugging
+  #debug: true
+
+  # Prefix, number of words, and suffix of the generated titles
+  title:
+    #prefix: "[Tweet] "
+    words:  9
+    suffix: " ..."
+
+  # Some post/page properties you may want to set automatically
+  #properties:
+  #  is_tweet: true
+  #  tweet_html: $    # the embedded tweet
+  #  share: false
+  #  comments: true
 
   # The timeline(s) you import, and which tweets you want/don't want
   timeline:
@@ -70,7 +101,7 @@ tweetsert:
     # If both include and exclude are configured below,
     # only tweets pulled in by "include" will be further filtered by "exclude"
 
-    # Only include tweets that have these words/handles/hashtags/URLs 
+    # Only include tweets that have these words/handles/hashtags/URLs
     #  (case insensitive regex)
     #include:
       #- '#blog'
@@ -93,6 +124,9 @@ tweetsert:
     #no_older: false
 
   embed:
+    # Set to false if you don't want the excerpt to be set; default true
+    #excerpts: false
+
     # Set to dark if you want a dark background/light text; default: light
     #theme: "dark"
 
@@ -112,37 +146,128 @@ tweetsert:
     #layout: "category_index.html"     # Default
 
     #title:
-    #  prefix: "Posts in the &laquo;"  # Prefix of the generated title 
-    #  suffix: "&raquo; category"      # Suffix of the generated title 
+    #  prefix: "Posts in the &laquo;"  # Prefix of the generated title
+    #  suffix: "&raquo; category"      # Suffix of the generated title
 
   tags:
     #default: "tweet"                  # Tag all tweets automatically with this
-
-    #hashtags: true                     # Import #hashtags as site tags
-
     dir: "tag"                         # Location of the generated tag indices
     layout: "tag_index.html"           #  As above, for tags
     #title:
     #  prefix: "Posts tagged &ldquo;"
     #  suffix: "&rdquo;"
 
+    #hashtags: true                     # Import #hashtags as site tags
+
+    # Hashtags you don't want to import
+    ignore:
+      - blahblah
+
+	# Automatic tagging based on content, tag: <string or array>
+    #auto:
+    #  keepkey: "@bitcoinkeepkey"
+    #  ethereum: "ethereum"
+    #  pets:
+    #    - buzzfeedanimals
+    #    - Duchess
+    #    - Princess
+    #    - Athos
+
 ```
+
+Here's another one, cleaned-up:
+
+```yaml
+tweetsert:
+  enabled: true
+  layout: "post"
+  debug: false
+
+  title:
+    prefix: "[Tweet] "
+    words:  9
+    suffix: " ..."
+
+  properties:
+    is_tweet: true
+    tweet_html: $
+    share: false
+    comments: true
+
+  timeline:
+    handle: 'ibrado'
+
+    handles:
+      - 'somehandle'
+      - 'anotherhandle'
+
+    access_token: "12345678-aBcDeFgHiJkLmNoPqRsTuVwXyZajni01234567890"
+    limit: 100
+
+    replies: false
+    retweets: true
+
+    #include:
+    #  - '#blogimport'
+
+    exclude:
+      - 'https://example.org/\d+/'
+
+    no_newer: true
+    no_older: false
+
+  embed:
+    excerpts: true
+    theme: "dark"
+    link_color: "#80FF80"
+    omit_script: false
+
+  category:
+    default: "tweets"
+    dir: ""
+
+    layout: "category_index"
+    title:
+      prefix: "Posts in the &laquo;"
+      suffix: "&raquo; category"
+
+  tags:
+    default: "tweet"
+    dir: "tag"
+
+    layout: "tag_index"
+    title:
+      prefix: "Posts tagged &ldquo;"
+      suffix: "&rdquo;"
+
+    hashtags: true
+    ignore:
+      - "blahblah"
+
+    auto:
+      keepkey: "@bitcoinkeepkey"
+      cryptocurrency: [ "bitcoin", "ethereum", "litecoin" ]
+      ethereum:
+        - "ethereum"
+        - "@ethereumproject"
+
+
+```
+
+## Cache
+
+*Tweetsert* caches Twitter's oEmbed results in a hidden folder, `.tweetsert-cache`. You may delete this if you encounter problems that you think might be related to the cache.
 
 ## Further configuration
 
-You may want to edit your `_layouts/home.html` to make the imported tweets look different from the regular ones, for instance,
+You may want to edit your `home` layout to make the imported tweets look different from the regular ones, for instance,
 
 ```
 {% for post in site.posts %}
-  {% if post.categories contains "tweets" %}
+  {% if post.tags contains "tweet" %}
 	<br/>
   {% else %}
-	<h2>
-	    <a href="{{ post.url | relative_url }}" class="medium post-title">
-	        {{ post.title | emojify }}
-	    </a>
-	</h2>
-    <!-- etc... -->
+    <!-- normally post header -->
   {% endif %}
 {% endfor %}
 ```
@@ -151,15 +276,17 @@ See the [author's blog](https://ibrado.org) for a demo.
 
 ## Contributing
 
-1. Fork this project, [https://github.com/ibrado/jekyll-tweetsert/fork](https://github.com/ibrado/jekyll-tweetsert/fork)
+1. Fork this project: [https://github.com/ibrado/jekyll-tweetsert/fork](https://github.com/ibrado/jekyll-tweetsert/fork)
+1. Clone it (`git clone git://github.com/your_user_name/jekyll-tweetsert.git`)
+1. `cd jekyll-tweetsert`
 1. Create a new branch (e.g. `git checkout -b my-bug-fix`)
 1. Make your changes
 1. Commit your changes (`git commit -m "Bug fix"`)
 1. Build it (`gem build jekyll-tweetsert.gemspec`)
 1. Install and test it (`gem install ./jekyll-tweetsert-*.gem`)
 1. Repeat from step 3 as necessary
-1. Push it (`git push -u origin my-bug-fix`)
-1. Create a Pull Request, making sure to select the proper branch, e.g. `my-bug-fix` (https://github.com/*your_user_name*/jekyll-tweetsert)
+1. Push the branch (`git push -u origin my-bug-fix`)
+1. Create a Pull Request, making sure to select the proper branch, e.g. `my-bug-fix` (via https://github.com/*your_user_name*/jekyll-tweetsert)
 
 Bug reports and pull requests are welcome on GitHub at [https://github.com/ibrado/jekyll-tweetsert](https://github.com/ibrado/jekyll-tweetsert). This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
 
