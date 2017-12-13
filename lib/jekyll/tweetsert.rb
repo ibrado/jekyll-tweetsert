@@ -370,12 +370,16 @@ module Jekyll
               tweetpost = Jekyll::Document.new(File.join(site.source, o[:category], name),
                 { :site => site, :collection => site.posts })
 
-              tweetpost.content = '<div class="jekyll-tweetsert">' + oembed["html"] + '</div>'
-
               tweetpost.data["title"] = prefix + title_base + suffix
-
               tweetpost.data["date"] = tweet['timestamp'].to_time
               tweetpost.data["layout"] = o[:layout]
+
+              pre = Liquid::Template.parse(o[:embed]["pre"] || '').render(tweetpost.to_liquid)
+              post = Liquid::Template.parse(o[:embed]["post"] || '').render(tweetpost.to_liquid)
+              #pre = o[:embed]["pre"] || ""
+              #post = o[:embed]["post"] || ""
+
+              tweetpost.content = '<div class="jekyll-tweetsert">' + pre + oembed["html"] + post + '</div>'
 
               if o[:embed]["excerpts"].nil? || o[:embed]["excerpts"]
                 tweetpost.data["excerpt"] = Jekyll::Excerpt.new(tweetpost)
