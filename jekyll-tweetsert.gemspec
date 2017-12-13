@@ -6,6 +6,8 @@ require "jekyll/tweetsert/version"
 Gem::Specification.new do |spec|
   spec.name          = "jekyll-tweetsert"
   spec.version       = Jekyll::Tweetsert::VERSION
+  spec.platform      = Gem::Platform::RUBY
+  spec.required_ruby_version = '>= 2.0.0'
   spec.authors       = ["Alex Ibrado"]
   spec.email         = ["alex@ibrado.org"]
 
@@ -23,6 +25,7 @@ Gem::Specification.new do |spec|
 
   spec.add_development_dependency "bundler", "~> 1.16"
 
+  spec.add_runtime_dependency "jekyll", "~> 3.0"
   spec.add_runtime_dependency "api_cache", "~> 0.3"
   spec.add_runtime_dependency "moneta", "~> 1.0"
 end
