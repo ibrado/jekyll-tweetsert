@@ -313,7 +313,7 @@ This has the nice side-effect of being able to do things like:
 <p>The following is a tweet:</p>
 <div class="my-tweet-class">{{ page.tweet }}</div>
 {% else %}
-  {% content %}
+  {{ content }}
 {% endif %}
 ```
 
