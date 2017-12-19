@@ -1,17 +1,21 @@
 # Jekyll::Tweetsert
 
-*Version 1.0.0*
+[![Gem Version](https://badge.fury.io/rb/jekyll-tweetsert.svg)](https://badge.fury.io/rb/jekyll-tweetsert)
 
 *Tweetsert* is a plugin for Jekyll that pulls recent tweets from one or more Twitter handles, then inserts them (dated appropriately) as regular posts on your site. You can specify which tweets to include or exclude based on patterns or words, import retweets and replies, and tweak the theme and link colors of the embedded tweet.
 
 To organize your tweet-posts, Tweetsert can automatically assign a category and/or tag. You may also choose to automatically import Twitter hashtags.
 
-### Why do this?
+## Why do this?
 
 1. You want your blog readers to also see your recent tweets when they visit;
 1. You may want to pull in tweets from friends, family, co-workers, etc. into your blog;
 1. You want to create a blog composed only of tweets from a group of people;
 1. Just for fun!
+
+## What's new?
+
+*v1.1.0* Added `pre` and `post` options to `embed`
 
 ## Installation
 
@@ -138,6 +142,11 @@ tweetsert:
     # Set to true if you manually include it in e.g. the header
     #omit_script: true
 
+    # Some markup to include right before and after the embedded tweet
+    # {{anything}} will be expanded to the corresponding frontmatter/properties
+    #pre: '<i>This was tweeted on {{date}}</i>'
+    #post: '<i>This is after. Click <a href="{{url}}">here</a> to view this tweet separately.</i>'
+
   category:
     default: "tweets"                  # Automatically set to this category
     dir: ""                            # Folder that contains your categories
@@ -223,6 +232,8 @@ tweetsert:
     theme: "dark"
     link_color: "#80FF80"
     omit_script: false
+    pre: '<i>I tweeted this on {{date}}</i>'
+    post: '<p>Click <a href="{{url}}">here</a> to comment.</p>'
 
   category:
     default: "tweets"
@@ -262,7 +273,19 @@ tweetsert:
 
 ## Further configuration
 
-The embedded tweet is wrapped inside a `<div class="jekyll-tweetsert">`. You may adjust its appearance via CSS:
+You may want to edit your `home`/index layout to make the imported tweets look different from the regular ones, for instance,
+
+```html
+{% for post in site.posts %}
+  {% if post.tags contains "tweet" %}
+	<br/>
+  {% else %}
+    <!-- normal post header -->
+  {% endif %}
+{% endfor %}
+```
+
+The embedded tweet is wrapped inside a `<div class="jekyll-tweetsert">`, with `embed.pre` inserted before, and `embed.post` after. You may adjust its appearance via CSS:
 
 ```css
 .jekyll-tweetsert {
@@ -278,22 +301,23 @@ If you'd rather access the embedded tweet directly, use a property:
 
 ```yaml
   properties:
-    tweet_html: $
+    tweet: $
 ```
 
-and include it as `{{ post.tweet_html }}` or `{{ page.tweet_html }}`
+and include it in your layout as `{{ page.tweet }}` or `{{ post.tweet }}`. You may want to do this especially since `{{ content }}` includes the contents of `pre` and `post` and you'd rather exclude them to further tweak the appearance via a custom layout.
 
-You may also want to edit your `home` layout to make the imported tweets look different from the regular ones, for instance,
+This has the nice side-effect of being able to do things like:
 
 ```html
-{% for post in site.posts %}
-  {% if post.tags contains "tweet" %}
-	<br/>
-  {% else %}
-    <!-- normal post header -->
-  {% endif %}
-{% endfor %}
+{% if page.tweet %}
+<p>The following is a tweet:</p>
+<div class="my-tweet-class">{{ page.tweet }}</div>
+{% else %}
+  {% content %}
+{% endif %}
 ```
+
+## Demo
 
 See the [author's blog](https://ibrado.org) for a demo.
 
@@ -319,3 +343,7 @@ The gem is available as open source under the terms of the [MIT License](https:/
 
 ## Code of Conduct
 Everyone interacting in the Jekyll::Tweetsert project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/jekyll-tweetsert/blob/master/CODE_OF_CONDUCT.md).
+
+## Also by the author
+
+[Jekyll Stickyposts Plugin](https://github.com/ibrado/jekyll-stickyposts) - Move/pin posts tagged `sticky: true` before all others. Sorting on custom fields supported, collection and paginator friendly.
