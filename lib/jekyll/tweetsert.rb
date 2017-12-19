@@ -403,8 +403,8 @@ module Jekyll
                 end
               end
 
-              pre = Liquid::Template.parse(o[:embed]["pre"] || '').render(tweetpost.to_liquid)
-              post = Liquid::Template.parse(o[:embed]["post"] || '').render(tweetpost.to_liquid)
+              pre = Liquid::Template.parse(o[:embed]["prefix"] || '').render(tweetpost.to_liquid)
+              post = Liquid::Template.parse(o[:embed]["suffix"] || '').render(tweetpost.to_liquid)
 
               tweetpost.content = '<div class="jekyll-tweetsert">' + pre + oembed["html"] + post + '</div>'
 

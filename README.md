@@ -15,7 +15,7 @@ To organize your tweet-posts, Tweetsert can automatically assign a category and/
 
 ## What's new?
 
-*v1.1.0* Added `pre` and `post` options to `embed`
+*v1.1.0* Added `prefix` and `suffix` options to `embed`
 
 ## Installation
 
@@ -144,8 +144,8 @@ tweetsert:
 
     # Some markup to include right before and after the embedded tweet
     # {{anything}} will be expanded to the corresponding frontmatter/properties
-    #pre: '<i>This was tweeted on {{date}}</i>'
-    #post: '<i>This is after. Click <a href="{{url}}">here</a> to view this tweet separately.</i>'
+    #prefix: '<i>This was tweeted on {{date}}</i>'
+    #suffix: '<i>This is after. Click <a href="{{url}}">here</a> to view this tweet separately.</i>'
 
   category:
     default: "tweets"                  # Automatically set to this category
@@ -232,8 +232,8 @@ tweetsert:
     theme: "dark"
     link_color: "#80FF80"
     omit_script: false
-    pre: '<i>I tweeted this on {{date}}</i>'
-    post: '<p>Click <a href="{{url}}">here</a> to comment.</p>'
+    prefix: '<i>I tweeted this on {{date}}</i>'
+    suffix: '<p>Click <a href="{{url}}">here</a> to comment.</p>'
 
   category:
     default: "tweets"
@@ -285,7 +285,7 @@ You may want to edit your `home`/index layout to make the imported tweets look d
 {% endfor %}
 ```
 
-The embedded tweet is wrapped inside a `<div class="jekyll-tweetsert">`, with `embed.pre` inserted before, and `embed.post` after. You may adjust its appearance via CSS:
+The embedded tweet is wrapped inside a `<div class="jekyll-tweetsert">`, with `embed.prefix` inserted before, and `embed.suffix` after. You may adjust its appearance via CSS:
 
 ```css
 .jekyll-tweetsert {
@@ -304,7 +304,7 @@ If you'd rather access the embedded tweet directly, use a property:
     tweet: $
 ```
 
-and include it in your layout as `{{ page.tweet }}` or `{{ post.tweet }}`. You may want to do this since `{{ content }}` includes the contents of `pre` and `post` and you'd rather exclude them to further tweak the appearance via a custom layout.
+and include it in your layout as `{{ page.tweet }}` or `{{ post.tweet }}`. You may want to do this since `{{ content }}` includes the contents of `embed.prefix` and `embed.suffix` and you'd rather exclude them to further tweak the appearance via a custom layout.
 
 This has the nice side-effect of being able to do things like:
 
