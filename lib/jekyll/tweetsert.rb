@@ -374,17 +374,6 @@ module Jekyll
               tweetpost.data["date"] = tweet['timestamp'].to_time
               tweetpost.data["layout"] = o[:layout]
 
-              pre = Liquid::Template.parse(o[:embed]["pre"] || '').render(tweetpost.to_liquid)
-              post = Liquid::Template.parse(o[:embed]["post"] || '').render(tweetpost.to_liquid)
-              #pre = o[:embed]["pre"] || ""
-              #post = o[:embed]["post"] || ""
-
-              tweetpost.content = '<div class="jekyll-tweetsert">' + pre + oembed["html"] + post + '</div>'
-
-              if o[:embed]["excerpts"].nil? || o[:embed]["excerpts"]
-                tweetpost.data["excerpt"] = Jekyll::Excerpt.new(tweetpost)
-              end
-
               tweet_tags = [o[:default_tag]].compact
 
               plain_text = tweet["full_text"].downcase.gsub(/&\S[^;]+;/, '');
@@ -412,6 +401,15 @@ module Jekyll
                 else
                   tweetpost.data[prop] = value
                 end
+              end
+
+              pre = Liquid::Template.parse(o[:embed]["pre"] || '').render(tweetpost.to_liquid)
+              post = Liquid::Template.parse(o[:embed]["post"] || '').render(tweetpost.to_liquid)
+
+              tweetpost.content = '<div class="jekyll-tweetsert">' + pre + oembed["html"] + post + '</div>'
+
+              if o[:embed]["excerpts"].nil? || o[:embed]["excerpts"]
+                tweetpost.data["excerpt"] = Jekyll::Excerpt.new(tweetpost)
               end
 
               site.posts.docs << tweetpost
