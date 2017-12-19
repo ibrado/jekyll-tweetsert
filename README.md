@@ -304,7 +304,7 @@ If you'd rather access the embedded tweet directly, use a property:
     tweet: $
 ```
 
-and include it in your layout as `{{ page.tweet }}` or `{{ post.tweet }}`. You may want to do this especially since `{{ content }}` includes the contents of `pre` and `post` and you'd rather exclude them to further tweak the appearance via a custom layout.
+and include it in your layout as `{{ page.tweet }}` or `{{ post.tweet }}`. You may want to do this since `{{ content }}` includes the contents of `pre` and `post` and you'd rather exclude them to further tweak the appearance via a custom layout.
 
 This has the nice side-effect of being able to do things like:
 
