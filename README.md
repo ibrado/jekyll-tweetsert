@@ -331,7 +331,7 @@ See the [author's blog](https://ibrado.org) for a demo.
 1. Commit your changes (`git commit -m "Bug fix"`)
 1. Build it (`gem build jekyll-tweetsert.gemspec`)
 1. Install and test it (`gem install ./jekyll-tweetsert-*.gem`)
-1. Repeat from step 3 as necessary
+1. Repeat from step 5 as necessary
 1. Push the branch (`git push -u origin my-bug-fix`)
 1. Create a Pull Request, making sure to select the proper branch, e.g. `my-bug-fix` (via https://github.com/*your_user_name*/jekyll-tweetsert)
 
@@ -347,3 +347,7 @@ Everyone interacting in the Jekyll::Tweetsert project's codebases, issue tracker
 ## Also by the author
 
 [Jekyll Stickyposts Plugin](https://github.com/ibrado/jekyll-stickyposts) - Move/pin posts tagged `sticky: true` before all others. Sorting on custom fields supported, collection and paginator friendly.
+
+[Jekyll::Paginate::Content](https://github.com/ibrado/jekyll-tweetsert) - Split your Jekyll pages, posts, etc. into multiple pages automatically. Single-page view, pager, SEO support, self-adjusting links, multipage-aware Table Of Contents.
+
+[Jekyll::ViewSource](https://github.com/ibrado/jekyll-viewsource) - Generate pretty or plain HTML and/or Markdown source code pages.
