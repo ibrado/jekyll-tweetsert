@@ -1,4 +1,4 @@
-require "jekyll/tweetsert/version"
+require "jekyll-tweetsert/version"
 require 'net/http'
 require "uri"
 require "cgi"
