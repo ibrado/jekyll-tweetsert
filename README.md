@@ -15,6 +15,8 @@ To organize your tweet-posts, Tweetsert can automatically assign a category and/
 
 ## What's new?
 
+*v1.1.1* Change cache location, allow inclusion in `_config.yml`
+
 *v1.1.0* Added `prefix` and `suffix` options to `embed`
 
 ## Installation
@@ -269,7 +271,7 @@ tweetsert:
 
 ## Cache
 
-*Tweetsert* caches Twitter's timelines and oEmbed results in a hidden folder, `.tweetsert-cache`. You may delete this if you encounter problems that you think might be related to the cache.
+*Tweetsert* caches Twitter's timelines and oEmbed results in a hidden folder in your home, `.jekyll-plugins/jekyll-tweetsert`. You may delete this if you encounter problems that you think might be related to the cache.
 
 ## Further configuration
 
