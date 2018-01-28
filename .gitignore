@@ -18,3 +18,4 @@ Session.vim
 .rspec_status
 
 jekyll-tweetsert*.gem
+Gemfile.lock
