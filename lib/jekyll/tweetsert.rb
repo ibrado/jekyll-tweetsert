@@ -136,7 +136,8 @@ module Jekyll
 
         @access_token = ENV['JTP_ACCESS_TOKEN'] || timeline["access_token"]
 
-        APICache.store = Moneta.new(:File, dir: './.tweetsert-cache')
+        tmpdir = File.join(Dir.home, '.jekyll-plugins', 'jekyll-tweetsert', 'cache')
+        APICache.store = Moneta.new(:File, dir: tmpdir)
 
         no_newer = timeline['no_newer'] || timeline['no_newer'].nil?
         no_older = timeline['no_older'] || timeline['no_older'].nil?
